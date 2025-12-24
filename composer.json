@@ -1,0 +1,37 @@
+{
+    "name": "daugtcom/statamic-commerce",
+    "autoload": {
+        "psr-4": {
+            "Daugt\\Commerce\\": "src"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Daugt\\Commerce\\Tests\\": "tests"
+        }
+    },
+    "require": {
+        "statamic/cms": "^6.0"
+    },
+    "require-dev": {
+        "orchestra/testbench": "^9.2 || ^10.0"
+    },
+    "config": {
+        "allow-plugins": {
+            "pixelfear/composer-dist-plugin": true
+        }
+    },
+    "extra": {
+        "statamic": {
+            "name": "Commerce",
+            "description": "Commerce addon"
+        },
+        "laravel": {
+            "providers": [
+                "Daugt\\Commerce\\ServiceProvider"
+            ]
+        }
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true
+}
