@@ -3,6 +3,7 @@
 namespace Daugt\Commerce;
 
 use Statamic\Providers\AddonServiceProvider;
+use Stripe\StripeClient;
 
 class ServiceProvider extends AddonServiceProvider
 {
@@ -22,6 +23,16 @@ class ServiceProvider extends AddonServiceProvider
             __DIR__ . '/../config/statamic/daugt-commerce.php',
             'statamic.daugt-commerce'
         );
+
+        $this->app->singleton(StripeClient::class, function () {
+            $secret = config('statamic.daugt-commerce.stripe.secret');
+
+            if (! $secret) {
+                throw new \RuntimeException('Missing Stripe secret. Set STRIPE_SECRET in your .env.');
+            }
+
+            return new StripeClient($secret);
+        });
     }
 
     public function boot() {
@@ -31,6 +42,7 @@ class ServiceProvider extends AddonServiceProvider
     public function bootAddon()
     {
         parent::bootAddon();
+        $this->loadJsonTranslationsFrom(__DIR__ . '/../lang');
         $this->publishes([
             __DIR__ . '/../config/statamic/daugt-commerce.php' => config_path('statamic/daugt-commerce.php'),
         ], 'daugt-commerce-config');

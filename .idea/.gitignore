@@ -13,3 +13,4 @@ modules.xml
 php.xml
 vcs.xml
 *.iml
+phpunit.xml

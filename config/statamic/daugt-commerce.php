@@ -1,5 +1,8 @@
 <?php
 
 return [
-    // Add addon configuration here.
+    'stripe' => [
+        'secret' => env('STRIPE_SECRET'),
+        'webhook_secret' => env('STRIPE_WEBHOOK_SECRET'),
+    ],
 ];

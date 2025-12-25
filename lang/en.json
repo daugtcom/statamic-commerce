@@ -1,0 +1,11 @@
+{
+  "daugt-commerce::billing-units.year": "Year",
+  "daugt-commerce::billing-units.month": "Month",
+  "daugt-commerce::billing-units.week": "Week",
+  "daugt-commerce::billing-units.day": "Day",
+  "daugt-commerce::billing-units.hour": "Hour",
+  "daugt-commerce::billing-types.one_time": "One-Time",
+  "daugt-commerce::billing-types.recurring": "Recurring",
+  "daugt-commerce::billing-duration-types.permanent": "Permanent",
+  "daugt-commerce::billing-duration-types.limited": "Limited"
+}

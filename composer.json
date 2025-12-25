@@ -11,7 +11,10 @@
         }
     },
     "require": {
-        "statamic/cms": "^6.0"
+        "statamic/cms": "^6.0",
+        "spatie/laravel-stripe-webhooks": "^3.10",
+        "stripe/stripe-php": "^18.2",
+        "laravel/prompts": "^0.3.8"
     },
     "require-dev": {
         "orchestra/testbench": "^9.2 || ^10.0"
