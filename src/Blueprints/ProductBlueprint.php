@@ -283,6 +283,9 @@ class ProductBlueprint
                         'sets' => $this->accessSets($accessCollections),
                     ],
                 ],
+                'if' => [
+                    'external_product' => 'equals false',
+                ],
             ],
         ];
 
