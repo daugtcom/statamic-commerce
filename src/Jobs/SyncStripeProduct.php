@@ -63,6 +63,7 @@ class SyncStripeProduct implements ShouldQueue
 
         $pricePayload = $this->buildPricePayload($entry, $stripeProductId, $isPublished);
         if (! $pricePayload) {
+            $this->persistStripeIds($entry, $stripeProductId, $stripePriceId);
             return;
         }
 

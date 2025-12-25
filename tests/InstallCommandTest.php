@@ -49,7 +49,7 @@ class InstallCommandTest extends TestCase
     public function test_install_command_includes_access_sets_when_access_is_ready(): void
     {
         config()->set('statamic.daugt-commerce.stripe.secret', 'test');
-        config()->set('statamic.daugt-access.entitlements.target_collections', ['courses', 'events']);
+        config()->set('statamic.daugt-access.entitlements.target_collections', ['courses', 'events', 'missing']);
 
         Addon::shouldReceive('get')
             ->with('daugtcom/statamic-access')
@@ -76,6 +76,7 @@ class InstallCommandTest extends TestCase
         $this->assertArrayHasKey('access_items', $sets);
         $this->assertArrayHasKey('courses', $sets['access_items']['sets']);
         $this->assertArrayHasKey('events', $sets['access_items']['sets']);
+        $this->assertArrayNotHasKey('missing', $sets['access_items']['sets']);
     }
 
     private function ensureBlueprintDirectories(): void
