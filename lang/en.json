@@ -47,6 +47,8 @@
   "daugt-commerce::products.fields.shipping": "Shipping",
   "daugt-commerce::products.fields.shipping_instructions": "Whether or not to add shipping when buying this product",
   "daugt-commerce::products.fields.stripe_tax_code": "Stripe Tax Code",
+  "daugt-commerce::products.fields.stripe_product_id": "Stripe Product ID",
+  "daugt-commerce::products.fields.stripe_price_id": "Stripe Price ID",
   "daugt-commerce::products.fields.slug": "Slug",
   "daugt-commerce::taxonomies.categories.title": "Category",
   "daugt-commerce::taxonomies.categories.blueprint.title": "Category",

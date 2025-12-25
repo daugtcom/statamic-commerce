@@ -22,6 +22,8 @@ class ProductEntry extends Entry
     public const ALL_ACCESS_ITEMS = 'all_access_items';
     public const SHIPPING = 'shipping';
     public const STRIPE_TAX_CODE = 'stripe_tax_code';
+    public const STRIPE_PRODUCT_ID = 'stripe_product_id';
+    public const STRIPE_PRICE_ID = 'stripe_price_id';
 
     public function price(): ?float
     {
@@ -85,6 +87,20 @@ class ProductEntry extends Entry
     public function stripeTaxCode(): ?string
     {
         $value = $this->get(self::STRIPE_TAX_CODE);
+
+        return $value !== null ? (string) $value : null;
+    }
+
+    public function stripeProductId(): ?string
+    {
+        $value = $this->get(self::STRIPE_PRODUCT_ID);
+
+        return $value !== null ? (string) $value : null;
+    }
+
+    public function stripePriceId(): ?string
+    {
+        $value = $this->get(self::STRIPE_PRICE_ID);
 
         return $value !== null ? (string) $value : null;
     }

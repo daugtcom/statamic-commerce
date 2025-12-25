@@ -47,6 +47,8 @@
   "daugt-commerce::products.fields.shipping": "Versand",
   "daugt-commerce::products.fields.shipping_instructions": "Ob beim Kauf dieses Produkts Versandkosten hinzugefügt werden sollen",
   "daugt-commerce::products.fields.stripe_tax_code": "Stripe-Steuercode",
+  "daugt-commerce::products.fields.stripe_product_id": "Stripe-Produkt-ID",
+  "daugt-commerce::products.fields.stripe_price_id": "Stripe-Preis-ID",
   "daugt-commerce::products.fields.slug": "Slug",
   "daugt-commerce::taxonomies.categories.title": "Kategorie",
   "daugt-commerce::taxonomies.categories.blueprint.title": "Kategorie",

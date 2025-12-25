@@ -199,6 +199,22 @@ class ProductBlueprint
                                         'display' => 'daugt-commerce::products.fields.stripe_tax_code',
                                     ],
                                 ],
+                                [
+                                    'handle' => 'stripe_product_id',
+                                    'field' => [
+                                        'type' => 'text',
+                                        'display' => 'daugt-commerce::products.fields.stripe_product_id',
+                                        'read_only' => true,
+                                    ],
+                                ],
+                                [
+                                    'handle' => 'stripe_price_id',
+                                    'field' => [
+                                        'type' => 'text',
+                                        'display' => 'daugt-commerce::products.fields.stripe_price_id',
+                                        'read_only' => true,
+                                    ],
+                                ],
                             ],
                         ],
                     ],

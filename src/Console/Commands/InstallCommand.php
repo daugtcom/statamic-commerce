@@ -11,6 +11,7 @@ use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Str;
 use Statamic\Console\RunsInPlease;
+use Statamic\Facades\Addon;
 use Statamic\Facades\Blueprint;
 use Statamic\Facades\Collection;
 
@@ -97,7 +98,9 @@ class InstallCommand extends Command {
 
     private function accessIsReady(): bool
     {
-        if (! class_exists('Daugt\\Access\\Entries\\EntitlementEntry')) {
+        $addon = Addon::get('daugtcom/statamic-access');
+
+        if (! $addon) {
             return false;
         }
 
