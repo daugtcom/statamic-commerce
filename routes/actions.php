@@ -1,6 +1,6 @@
 <?php
 
-use Daugt\Commerce\Controllers\CheckoutController;
+use Daugt\Commerce\Controllers\StripeCheckoutController;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/checkout', CheckoutController::class);
+Route::get('/stripe-checkout', StripeCheckoutController::class);

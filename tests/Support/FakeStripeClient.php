@@ -8,6 +8,7 @@ class FakeStripeClient extends StripeClient
 {
     public FakeStripeProductsService $products;
     public FakeStripePricesService $prices;
+    public FakeStripeCustomersService $customers;
 
     public function __construct()
     {
@@ -15,6 +16,7 @@ class FakeStripeClient extends StripeClient
 
         $this->products = new FakeStripeProductsService();
         $this->prices = new FakeStripePricesService();
+        $this->customers = new FakeStripeCustomersService();
     }
 }
 
@@ -123,5 +125,37 @@ class FakeStripePricesService
         $price->active = $payload['active'] ?? true;
 
         return $price;
+    }
+}
+
+class FakeStripeCustomersService
+{
+    public array $created = [];
+    public array $updated = [];
+
+    public function create(array $payload)
+    {
+        $id = 'cus_' . (count($this->created) + 1);
+        $this->created[] = $payload;
+
+        return (object) [
+            'id' => $id,
+            'email' => $payload['email'] ?? null,
+            'name' => $payload['name'] ?? null,
+        ];
+    }
+
+    public function update(string $id, array $payload)
+    {
+        $this->updated[] = [
+            'id' => $id,
+            'payload' => $payload,
+        ];
+
+        return (object) [
+            'id' => $id,
+            'email' => $payload['email'] ?? null,
+            'name' => $payload['name'] ?? null,
+        ];
     }
 }

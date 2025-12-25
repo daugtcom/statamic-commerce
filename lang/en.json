@@ -50,6 +50,7 @@
   "daugt-commerce::products.fields.stripe_product_id": "Stripe Product ID",
   "daugt-commerce::products.fields.stripe_price_id": "Stripe Price ID",
   "daugt-commerce::products.fields.slug": "Slug",
+  "daugt-commerce::users.fields.stripe_id": "Stripe Customer ID",
   "daugt-commerce::taxonomies.categories.title": "Category",
   "daugt-commerce::taxonomies.categories.blueprint.title": "Category",
   "daugt-commerce::taxonomies.categories.fields.title": "Title",
