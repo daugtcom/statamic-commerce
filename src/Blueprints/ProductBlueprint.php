@@ -9,10 +9,13 @@ use Statamic\Fields\Blueprint as StatamicBlueprint;
 
 class ProductBlueprint
 {
-    public function __invoke(array $accessCollections = [], bool $includeAccess = false): StatamicBlueprint
+    public function __invoke(
+        array $accessCollections = [],
+        bool $includeAccess = false
+    ): StatamicBlueprint
     {
         $blueprint = BlueprintFacade::make();
-        $blueprint->setContents([
+        $tabs = [
             'title' => 'daugt-commerce::products.blueprint.title',
             'tabs' => [
                 'main' => [
@@ -185,40 +188,6 @@ class ProductBlueprint
                         ],
                     ],
                 ],
-                'stripe' => [
-                    'sections' => [
-                        [
-                            'display' => 'daugt-commerce::products.sections.tax',
-                            'fields' => [
-                                [
-                                    'handle' => 'stripe_tax_code',
-                                    'field' => [
-                                        'dictionary' => 'stripe_tax_codes',
-                                        'max_items' => 1,
-                                        'type' => 'dictionary',
-                                        'display' => 'daugt-commerce::products.fields.stripe_tax_code',
-                                    ],
-                                ],
-                                [
-                                    'handle' => 'stripe_product_id',
-                                    'field' => [
-                                        'type' => 'text',
-                                        'display' => 'daugt-commerce::products.fields.stripe_product_id',
-                                        'read_only' => true,
-                                    ],
-                                ],
-                                [
-                                    'handle' => 'stripe_price_id',
-                                    'field' => [
-                                        'type' => 'text',
-                                        'display' => 'daugt-commerce::products.fields.stripe_price_id',
-                                        'read_only' => true,
-                                    ],
-                                ],
-                            ],
-                        ],
-                    ],
-                ],
                 'sidebar' => [
                     'sections' => [
                         [
@@ -237,7 +206,9 @@ class ProductBlueprint
                     ],
                 ],
             ],
-        ]);
+        ];
+
+        $blueprint->setContents($tabs);
 
         return $blueprint;
     }

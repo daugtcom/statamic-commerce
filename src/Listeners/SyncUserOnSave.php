@@ -2,7 +2,7 @@
 
 namespace Daugt\Commerce\Listeners;
 
-use Daugt\Commerce\Jobs\SyncStripeCustomer;
+use Daugt\Commerce\Jobs\SyncPaymentCustomer;
 use Statamic\Events\UserSaved;
 
 class SyncUserOnSave
@@ -15,6 +15,6 @@ class SyncUserOnSave
             return;
         }
 
-        SyncStripeCustomer::dispatch($user->id());
+        SyncPaymentCustomer::dispatch($user->id());
     }
 }

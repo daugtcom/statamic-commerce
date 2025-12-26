@@ -26,7 +26,8 @@ class FetchStripeTaxCodes extends Command {
 
     private Collection $taxCodes;
 
-    public function __construct(private StripeClient $stripeClient) {
+    public function __construct()
+    {
         parent::__construct();
     }
 
@@ -34,8 +35,8 @@ class FetchStripeTaxCodes extends Command {
      * @throws ApiErrorException
      * @throws InvalidArgumentException
      */
-    public function handle() {
-        $taxCodes = $this->fetch();
+    public function handle(StripeClient $stripeClient) {
+        $taxCodes = $this->fetch($stripeClient);
 
         if ($taxCodes->isEmpty()) {
             warning('0 tax codes fetched.');
@@ -49,11 +50,12 @@ class FetchStripeTaxCodes extends Command {
      * @throws ApiErrorException
      * @throws InvalidArgumentException
      */
-    public function fetch(bool $withProgress = true): Collection
+    public function fetch(?StripeClient $stripeClient = null, bool $withProgress = true): Collection
     {
         $this->taxCodes = collect();
 
-        $page = $this->stripeClient->taxCodes->all(['limit' => 100]);
+        $stripeClient = $stripeClient ?? app(StripeClient::class);
+        $page = $stripeClient->taxCodes->all(['limit' => 100]);
 
         if ($page->isEmpty()) {
             Cache::set(self::CACHE_KEY, [], self::CACHE_TTL);

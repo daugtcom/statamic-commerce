@@ -3,11 +3,16 @@
 namespace Daugt\Commerce\Listeners;
 
 use Daugt\Commerce\Entries\ProductEntry;
-use Daugt\Commerce\Jobs\ArchiveStripeProduct;
+use Daugt\Commerce\Jobs\ArchivePaymentProduct;
+use Daugt\Commerce\Payments\PaymentProviderResolver;
 use Statamic\Events\EntryDeleted;
 
 class SyncProductOnDelete
 {
+    public function __construct(private PaymentProviderResolver $resolver)
+    {
+    }
+
     public function handle(EntryDeleted $event): void
     {
         $entry = $event->entry;
@@ -16,9 +21,11 @@ class SyncProductOnDelete
             return;
         }
 
-        ArchiveStripeProduct::dispatch(
-            $entry->get('stripe_product_id'),
-            $entry->get('stripe_price_id')
+        $ids = $this->resolver->store()->getProductIds($entry);
+
+        ArchivePaymentProduct::dispatch(
+            $ids['product_id'] ?? null,
+            $ids['price_id'] ?? null
         );
     }
 }

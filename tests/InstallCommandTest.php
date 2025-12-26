@@ -9,19 +9,17 @@ use Statamic\Facades\Addon;
 use Statamic\Facades\Blueprint;
 use Statamic\Facades\Collection as CollectionFacade;
 use Statamic\Facades\Taxonomy;
-use Stripe\StripeClient;
 
 class InstallCommandTest extends TestCase
 {
     public function test_install_command_creates_products_and_categories_without_access(): void
     {
-        config()->set('statamic.daugt-commerce.stripe.secret', 'test');
-
         Addon::shouldReceive('get')
             ->with('daugtcom/statamic-access')
             ->andReturn(null);
-
-        $this->fakeStripeClient();
+        Addon::shouldReceive('get')
+            ->with('daugtcom/statamic-commerce')
+            ->andReturn(null);
 
         $this->ensureBlueprintDirectories();
 
@@ -48,14 +46,14 @@ class InstallCommandTest extends TestCase
 
     public function test_install_command_includes_access_sets_when_access_is_ready(): void
     {
-        config()->set('statamic.daugt-commerce.stripe.secret', 'test');
         config()->set('statamic.daugt-access.entitlements.target_collections', ['courses', 'events', 'missing']);
 
         Addon::shouldReceive('get')
             ->with('daugtcom/statamic-access')
             ->andReturn(StatamicAddon::make('daugtcom/statamic-access'));
-
-        $this->fakeStripeClient();
+        Addon::shouldReceive('get')
+            ->with('daugtcom/statamic-commerce')
+            ->andReturn(null);
 
         $this->ensureBlueprintDirectories();
 
@@ -92,38 +90,5 @@ class InstallCommandTest extends TestCase
                 File::makeDirectory($path, 0755, true);
             }
         }
-    }
-
-    private function fakeStripeClient(): void
-    {
-        $fakeStripeClient = new class('test') extends StripeClient {
-            public function getService($name)
-            {
-                if ($name !== 'taxCodes') {
-                    return parent::getService($name);
-                }
-
-                return new class {
-                    public function all(array $params = [])
-                    {
-                        return new class {
-                            public array $data = [];
-
-                            public function isEmpty(): bool
-                            {
-                                return true;
-                            }
-
-                            public function nextPage(): self
-                            {
-                                return $this;
-                            }
-                        };
-                    }
-                };
-            }
-        };
-
-        $this->app->instance(StripeClient::class, $fakeStripeClient);
     }
 }

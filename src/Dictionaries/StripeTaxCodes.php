@@ -16,11 +16,13 @@ class StripeTaxCodes extends BasicDictionary
             return $items;
         }
 
-        if (! config('statamic.daugt-commerce.stripe.secret')) {
+        $secret = config('statamic.daugt-commerce.payment.providers.stripe.config.secret');
+
+        if (! $secret) {
             return [];
         }
 
-        app(FetchStripeTaxCodes::class)->fetch(false);
+        app(FetchStripeTaxCodes::class)->fetch(null, false);
 
         $items = Cache::get(FetchStripeTaxCodes::CACHE_KEY);
 

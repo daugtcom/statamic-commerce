@@ -23,6 +23,11 @@ class StripeCheckoutController
             ],*/
             'currency' => 'eur'
         ]);
-        return view('statamic-commerce::stripe-checkout', ['stripe_key' => config('statamic.daugt-commerce.stripe.key'), 'stripe_client_secret' => $checkout_session->client_secret]);
+        $key = config('statamic.daugt-commerce.payment.providers.stripe.config.key');
+
+        return view('statamic-commerce::stripe-checkout', [
+            'stripe_key' => $key,
+            'stripe_client_secret' => $checkout_session->client_secret,
+        ]);
     }
 }

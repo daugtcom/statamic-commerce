@@ -7,6 +7,7 @@ use Daugt\Commerce\Blueprints\ProductCollection;
 use Daugt\Commerce\Blueprints\CategoryBlueprint;
 use Daugt\Commerce\Blueprints\CategoryTaxonomy;
 use Daugt\Commerce\Console\AsciiArt;
+use Daugt\Commerce\Payments\PaymentProviderResolver;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Str;
@@ -43,7 +44,9 @@ class InstallCommand extends Command {
             $categoryBlueprint
         );
 
-        Artisan::call('statamic:daugt-commerce:fetch-stripe-tax-codes');
+        if ($this->isStripeProvider()) {
+            Artisan::call('statamic:daugt-commerce:fetch-stripe-tax-codes');
+        }
     }
 
     private function createStructures(
@@ -88,7 +91,11 @@ class InstallCommand extends Command {
 
     private function ensureStripeSecretConfigured(): bool
     {
-        if (config('statamic.daugt-commerce.stripe.secret')) {
+        if (! $this->isStripeProvider()) {
+            return true;
+        }
+
+        if ($this->stripeSecret()) {
             return true;
         }
 
@@ -121,6 +128,21 @@ class InstallCommand extends Command {
             $collections,
             fn (string $handle) => Collection::find($handle) !== null
         ));
+    }
+
+    private function isStripeProvider(): bool
+    {
+        return $this->providerHandle() === 'stripe';
+    }
+
+    private function stripeSecret(): ?string
+    {
+        return config('statamic.daugt-commerce.payment.providers.stripe.config.secret');
+    }
+
+    private function providerHandle(): string
+    {
+        return app(PaymentProviderResolver::class)->providerHandle();
     }
 
 }

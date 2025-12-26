@@ -3,7 +3,7 @@
 namespace Daugt\Commerce\Listeners;
 
 use Daugt\Commerce\Entries\ProductEntry;
-use Daugt\Commerce\Jobs\SyncStripeProduct;
+use Daugt\Commerce\Jobs\SyncPaymentProduct;
 use Statamic\Events\EntrySaved;
 
 class SyncProductOnSave
@@ -16,6 +16,6 @@ class SyncProductOnSave
             return;
         }
 
-        SyncStripeProduct::dispatch($entry->id());
+        SyncPaymentProduct::dispatch($entry->id());
     }
 }

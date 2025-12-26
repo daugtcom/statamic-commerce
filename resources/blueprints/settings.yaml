@@ -1,0 +1,23 @@
+title: 'daugt-commerce::settings.title'
+tabs:
+  main:
+    display: 'daugt-commerce::settings.tabs.main'
+    sections:
+      -
+        fields:
+          -
+            handle: provider
+            field:
+              type: dictionary
+              dictionary: payment_providers
+              display: 'daugt-commerce::settings.fields.provider'
+              max_items: 1
+              default: stripe
+          -
+            handle: currency
+            field:
+              type: dictionary
+              dictionary: currencies
+              max_items: 1
+              display: 'daugt-commerce::settings.fields.currency'
+              default: EUR

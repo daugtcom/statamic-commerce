@@ -4,6 +4,7 @@ namespace Daugt\Commerce;
 
 use Statamic\Providers\AddonServiceProvider;
 use Stripe\StripeClient;
+use Daugt\Commerce\Payments\PaymentProviderResolver;
 
 class ServiceProvider extends AddonServiceProvider
 {
@@ -24,8 +25,12 @@ class ServiceProvider extends AddonServiceProvider
             'statamic.daugt-commerce'
         );
 
+        $this->app->singleton(PaymentProviderResolver::class, function ($app) {
+            return new PaymentProviderResolver($app);
+        });
+
         $this->app->singleton(StripeClient::class, function () {
-            $secret = config('statamic.daugt-commerce.stripe.secret');
+            $secret = config('statamic.daugt-commerce.payment.providers.stripe.config.secret');
 
             if (! $secret) {
                 throw new \RuntimeException('Missing Stripe secret. Set STRIPE_SECRET in your .env.');
