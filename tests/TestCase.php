@@ -18,6 +18,8 @@ abstract class TestCase extends AddonTestCase
     {
         parent::setUp();
 
+        \Daugt\Commerce\Support\AddonSettings::reset();
+
         // allows "clearCachedUrls" to be called during tests in the facade
         Nav::shouldReceive('clearCachedUrls')->zeroOrMoreTimes();
         $this->addToAssertionCount(-1);

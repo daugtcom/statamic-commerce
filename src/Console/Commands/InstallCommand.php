@@ -4,6 +4,10 @@ namespace Daugt\Commerce\Console\Commands;
 
 use Daugt\Commerce\Blueprints\ProductBlueprint;
 use Daugt\Commerce\Blueprints\ProductCollection;
+use Daugt\Commerce\Blueprints\OrderBlueprint;
+use Daugt\Commerce\Blueprints\OrderCollection;
+use Daugt\Commerce\Blueprints\InvoiceBlueprint;
+use Daugt\Commerce\Blueprints\InvoiceCollection;
 use Daugt\Commerce\Blueprints\CategoryBlueprint;
 use Daugt\Commerce\Blueprints\CategoryTaxonomy;
 use Daugt\Commerce\Console\AsciiArt;
@@ -27,6 +31,10 @@ class InstallCommand extends Command {
     public function handle(
         ProductCollection $productCollection,
         ProductBlueprint $productBlueprint,
+        OrderCollection $orderCollection,
+        OrderBlueprint $orderBlueprint,
+        InvoiceCollection $invoiceCollection,
+        InvoiceBlueprint $invoiceBlueprint,
         CategoryTaxonomy $categoryTaxonomy,
         CategoryBlueprint $categoryBlueprint
     ): void
@@ -40,6 +48,10 @@ class InstallCommand extends Command {
         $this->createStructures(
             $productCollection,
             $productBlueprint,
+            $orderCollection,
+            $orderBlueprint,
+            $invoiceCollection,
+            $invoiceBlueprint,
             $categoryTaxonomy,
             $categoryBlueprint
         );
@@ -52,6 +64,10 @@ class InstallCommand extends Command {
     private function createStructures(
         ProductCollection $productCollection,
         ProductBlueprint $productBlueprint,
+        OrderCollection $orderCollection,
+        OrderBlueprint $orderBlueprint,
+        InvoiceCollection $invoiceCollection,
+        InvoiceBlueprint $invoiceBlueprint,
         CategoryTaxonomy $categoryTaxonomy,
         CategoryBlueprint $categoryBlueprint
     ): self {
@@ -83,6 +99,28 @@ class InstallCommand extends Command {
             Str::singular($taxonomy->handle())
         ));
         Blueprint::save($taxonomyBlueprint);
+
+        $orders = $orderCollection();
+        $orders->save();
+
+        $ordersBlueprint = $orderBlueprint();
+        $ordersBlueprint->setHandle(sprintf(
+            'collections/%s/%s',
+            $orders->handle(),
+            Str::singular($orders->handle())
+        ));
+        Blueprint::save($ordersBlueprint);
+
+        $invoices = $invoiceCollection();
+        $invoices->save();
+
+        $invoicesBlueprint = $invoiceBlueprint();
+        $invoicesBlueprint->setHandle(sprintf(
+            'collections/%s/%s',
+            $invoices->handle(),
+            Str::singular($invoices->handle())
+        ));
+        Blueprint::save($invoicesBlueprint);
 
         $this->info('Collections, taxonomies, and blueprints created!');
 

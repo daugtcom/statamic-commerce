@@ -3,6 +3,8 @@
 namespace Daugt\Commerce\Payments\Extensions;
 
 use Daugt\Commerce\Entries\ProductEntry;
+use Daugt\Commerce\Entries\OrderEntry;
+use Daugt\Commerce\Entries\InvoiceEntry;
 use Daugt\Commerce\Payments\Checkout\StripeCheckoutBuilder;
 use Statamic\Fields\Blueprint as StatamicBlueprint;
 
@@ -10,12 +12,23 @@ class StripeProviderExtension extends AbstractPaymentProviderExtension
 {
     public function extendEntryBlueprint(string $collectionHandle, StatamicBlueprint $blueprint): void
     {
-        if ($collectionHandle !== ProductEntry::COLLECTION) {
+        if ($collectionHandle === ProductEntry::COLLECTION) {
+            $this->ensureStripeTab($blueprint, 'daugt-commerce::products.sections.tax');
+            $blueprint->ensureFieldsInTab($this->productStripeFields(), 'stripe');
             return;
         }
 
-        $this->ensureStripeTab($blueprint);
-        $blueprint->ensureFieldsInTab($this->stripeFields(), 'stripe');
+        if ($collectionHandle === OrderEntry::COLLECTION) {
+            $this->ensureStripeTab($blueprint, 'daugt-commerce::orders.sections.stripe');
+            $blueprint->ensureFieldsInTab($this->orderStripeFields(), 'stripe');
+            $this->ensureStripeOrderItemField($blueprint);
+            return;
+        }
+
+        if ($collectionHandle === InvoiceEntry::COLLECTION) {
+            $this->ensureStripeTab($blueprint, 'daugt-commerce::invoices.sections.stripe');
+            $blueprint->ensureFieldsInTab($this->invoiceStripeFields(), 'stripe');
+        }
     }
 
     public function extendUserBlueprint(StatamicBlueprint $blueprint): void
@@ -29,7 +42,11 @@ class StripeProviderExtension extends AbstractPaymentProviderExtension
 
     public static function entryTabsToRemove(string $collectionHandle): array
     {
-        if ($collectionHandle !== ProductEntry::COLLECTION) {
+        if (! in_array($collectionHandle, [
+            ProductEntry::COLLECTION,
+            OrderEntry::COLLECTION,
+            InvoiceEntry::COLLECTION,
+        ], true)) {
             return [];
         }
 
@@ -46,7 +63,7 @@ class StripeProviderExtension extends AbstractPaymentProviderExtension
         return app(StripeCheckoutBuilder::class)->build($params);
     }
 
-    private function ensureStripeTab(StatamicBlueprint $blueprint): void
+    private function ensureStripeTab(StatamicBlueprint $blueprint, string $display): void
     {
         $contents = $blueprint->contents();
         $tabs = $contents['tabs'] ?? [];
@@ -59,7 +76,7 @@ class StripeProviderExtension extends AbstractPaymentProviderExtension
         }
 
         if (! isset($sections[$sectionIndex]['display'])) {
-            $sections[$sectionIndex]['display'] = 'daugt-commerce::products.sections.tax';
+            $sections[$sectionIndex]['display'] = $display;
         }
 
         $stripeTab['sections'] = $sections;
@@ -69,7 +86,7 @@ class StripeProviderExtension extends AbstractPaymentProviderExtension
         $blueprint->setContents($contents);
     }
 
-    private function stripeFields(): array
+    private function productStripeFields(): array
     {
         return [
             ProductEntry::STRIPE_TAX_CODE => [
@@ -89,5 +106,81 @@ class StripeProviderExtension extends AbstractPaymentProviderExtension
                 'read_only' => true,
             ],
         ];
+    }
+
+    private function orderStripeFields(): array
+    {
+        return [
+            OrderEntry::STRIPE_CHECKOUT_SESSION_ID => [
+                'type' => 'text',
+                'display' => 'daugt-commerce::orders.fields.stripe_checkout_session_id',
+                'read_only' => true,
+            ],
+        ];
+    }
+
+    private function invoiceStripeFields(): array
+    {
+        return [
+            InvoiceEntry::STRIPE_PAYMENT_INTENT_ID => [
+                'type' => 'text',
+                'display' => 'daugt-commerce::invoices.fields.stripe_payment_intent_id',
+                'read_only' => true,
+            ],
+            InvoiceEntry::STRIPE_INVOICE_ID => [
+                'type' => 'text',
+                'display' => 'daugt-commerce::invoices.fields.stripe_invoice_id',
+                'read_only' => true,
+            ],
+        ];
+    }
+
+    private function ensureStripeOrderItemField(StatamicBlueprint $blueprint): void
+    {
+        $contents = $blueprint->contents();
+        $tabs = $contents['tabs'] ?? [];
+        $sections = $tabs['main']['sections'] ?? null;
+
+        if (! is_array($sections)) {
+            return;
+        }
+
+        foreach ($sections as $sectionIndex => $section) {
+            $fields = $section['fields'] ?? null;
+            if (! is_array($fields)) {
+                continue;
+            }
+
+            foreach ($fields as $fieldIndex => $field) {
+                if (($field['handle'] ?? null) !== OrderEntry::ITEMS) {
+                    continue;
+                }
+
+                $itemFields = $field['field']['sets']['item']['fields'] ?? null;
+                if (! is_array($itemFields)) {
+                    return;
+                }
+
+                foreach ($itemFields as $itemField) {
+                    if (($itemField['handle'] ?? null) === 'stripe_subscription_id') {
+                        return;
+                    }
+                }
+
+                $itemFields[] = [
+                    'handle' => 'stripe_subscription_id',
+                    'field' => [
+                        'type' => 'text',
+                        'display' => 'daugt-commerce::orders.fields.item_stripe_subscription_id',
+                        'read_only' => true,
+                        'width' => 33,
+                    ],
+                ];
+
+                $contents['tabs']['main']['sections'][$sectionIndex]['fields'][$fieldIndex]['field']['sets']['item']['fields'] = $itemFields;
+                $blueprint->setContents($contents);
+                return;
+            }
+        }
     }
 }

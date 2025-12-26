@@ -6,7 +6,6 @@ use Daugt\Commerce\Carts\CartManager;
 use Daugt\Commerce\Payments\Contracts\PaymentProviderExtension;
 use Daugt\Commerce\Payments\PaymentProviderResolver;
 use Daugt\Commerce\Support\AddonSettings;
-use Daugt\Commerce\Support\MoneyFormatter;
 use Statamic\Tags\Tags;
 
 class DaugtCommerceTags extends Tags
@@ -136,7 +135,12 @@ class DaugtCommerceTags extends Tags
             ?: 'EUR';
         $locale = $this->params->get('locale') ?: app()->getLocale();
 
-        $formatted = MoneyFormatter::format($amount, $currency, $locale);
+        $formatter = new \NumberFormatter($locale, \NumberFormatter::CURRENCY);
+        $formatted = $formatter->formatCurrency($amount, strtoupper($currency));
+
+        if ($formatted === false) {
+            throw new \RuntimeException(sprintf('Unable to format currency [%s] for locale [%s].', $currency, $locale));
+        }
 
         if ($this->isPair) {
             return $this->parse(['value' => $formatted]);

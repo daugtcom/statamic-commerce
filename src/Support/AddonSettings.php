@@ -35,6 +35,24 @@ class AddonSettings
         return null;
     }
 
+    public static function set(string|array $key, mixed $value = null): void
+    {
+        $addon = self::addon();
+
+        if (! $addon) {
+            return;
+        }
+
+        $settings = $addon->settings();
+        $settings->set($key, $value);
+        $settings->save();
+    }
+
+    public static function reset(): void
+    {
+        self::$addon = null;
+    }
+
     private static function addon(): ?StatamicAddon
     {
         if (self::$addon !== null) {

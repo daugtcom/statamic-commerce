@@ -21,3 +21,10 @@ tabs:
               max_items: 1
               display: 'daugt-commerce::settings.fields.currency'
               default: EUR
+          -
+            handle: next_order_number
+            field:
+              type: integer
+              display: 'daugt-commerce::settings.fields.next_order_number'
+              instructions: 'daugt-commerce::settings.fields.next_order_number_instructions'
+              default: 1
