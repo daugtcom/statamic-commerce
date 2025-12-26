@@ -61,5 +61,9 @@
   "daugt-commerce::taxonomies.categories.fields.description": "Beschreibung",
   "daugt-commerce::taxonomies.categories.fields.image": "Bild",
   "daugt-commerce::taxonomies.categories.fields.slug": "Slug",
-  "daugt-commerce::cart.subscription_limit": "Es kann nur ein Abonnement pro Checkout hinzugefügt werden."
+  "daugt-commerce::cart.title": "Einkaufswagen",
+  "daugt-commerce::cart.subscription_limit": "Es kann nur ein Abonnement pro Checkout hinzugefügt werden.",
+  "daugt-commerce::cart.remove": "Entfernen",
+  "daugt-commerce::cart.quantity": "Anzahl: :count",
+  "daugt-commerce::cart.go-to-checkout": "Zahlungspflichtig bestellen"
 }

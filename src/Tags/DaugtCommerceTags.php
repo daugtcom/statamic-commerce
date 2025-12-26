@@ -5,6 +5,8 @@ namespace Daugt\Commerce\Tags;
 use Daugt\Commerce\Carts\CartManager;
 use Daugt\Commerce\Payments\Contracts\PaymentProviderExtension;
 use Daugt\Commerce\Payments\PaymentProviderResolver;
+use Daugt\Commerce\Support\AddonSettings;
+use Daugt\Commerce\Support\MoneyFormatter;
 use Statamic\Tags\Tags;
 
 class DaugtCommerceTags extends Tags
@@ -95,7 +97,7 @@ class DaugtCommerceTags extends Tags
         return $this->parseLoop($items);
     }
 
-    public function cartCount(): int
+    public function cartCount(): string|int
     {
         $manager = app(CartManager::class);
         $cart = $manager->get();
@@ -106,6 +108,41 @@ class DaugtCommerceTags extends Tags
         }
 
         return $this->parse(['count' => $count]);
+    }
+
+    public function money(): string
+    {
+        $raw = $this->params->get('value');
+
+        if ($raw === null) {
+            $raw = $this->params->get('amount');
+        }
+
+        if ($raw === null && $this->isPair) {
+            $raw = trim($this->content);
+        }
+
+        if ($raw === null || $raw === '') {
+            return '';
+        }
+
+        if (! is_numeric($raw)) {
+            return '';
+        }
+
+        $amount = (float) $raw;
+        $currency = $this->params->get('currency')
+            ?: AddonSettings::firstValue('currency')
+            ?: 'EUR';
+        $locale = $this->params->get('locale') ?: app()->getLocale();
+
+        $formatted = MoneyFormatter::format($amount, $currency, $locale);
+
+        if ($this->isPair) {
+            return $this->parse(['value' => $formatted]);
+        }
+
+        return $formatted;
     }
 
     public function checkout(): string
