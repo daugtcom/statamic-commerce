@@ -2,28 +2,13 @@
 
 namespace Daugt\Commerce\Payments\Extensions;
 
-use Daugt\Commerce\Payments\Contracts\PaymentProviderExtension;
+use Daugt\Commerce\Payments\Checkout\DummyCheckoutBuilder;
 use Statamic\Fields\Blueprint as StatamicBlueprint;
 
-class DummyProviderExtension implements PaymentProviderExtension
+class DummyProviderExtension extends AbstractPaymentProviderExtension
 {
-    public function extendEntryBlueprint(string $collectionHandle, StatamicBlueprint $blueprint): void
+    public function checkoutView(array $params): ?array
     {
-        // No-op for dummy provider.
-    }
-
-    public function extendUserBlueprint(StatamicBlueprint $blueprint): void
-    {
-        // No-op for dummy provider.
-    }
-
-    public static function entryTabsToRemove(string $collectionHandle): array
-    {
-        return [];
-    }
-
-    public static function userFieldsToRemove(): array
-    {
-        return [];
+        return app(DummyCheckoutBuilder::class)->build($params);
     }
 }

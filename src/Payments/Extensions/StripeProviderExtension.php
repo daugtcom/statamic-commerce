@@ -3,10 +3,10 @@
 namespace Daugt\Commerce\Payments\Extensions;
 
 use Daugt\Commerce\Entries\ProductEntry;
-use Daugt\Commerce\Payments\Contracts\PaymentProviderExtension;
+use Daugt\Commerce\Payments\Checkout\StripeCheckoutBuilder;
 use Statamic\Fields\Blueprint as StatamicBlueprint;
 
-class StripeProviderExtension implements PaymentProviderExtension
+class StripeProviderExtension extends AbstractPaymentProviderExtension
 {
     public function extendEntryBlueprint(string $collectionHandle, StatamicBlueprint $blueprint): void
     {
@@ -39,6 +39,11 @@ class StripeProviderExtension implements PaymentProviderExtension
     public static function userFieldsToRemove(): array
     {
         return ['stripe_id'];
+    }
+
+    public function checkoutView(array $params): ?array
+    {
+        return app(StripeCheckoutBuilder::class)->build($params);
     }
 
     private function ensureStripeTab(StatamicBlueprint $blueprint): void

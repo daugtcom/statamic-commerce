@@ -13,4 +13,6 @@ interface PaymentProviderExtension
     public static function entryTabsToRemove(string $collectionHandle): array;
 
     public static function userFieldsToRemove(): array;
+
+    public function checkoutView(array $params): ?array;
 }

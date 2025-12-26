@@ -2,9 +2,11 @@
 
 namespace Daugt\Commerce;
 
+use Daugt\Commerce\Carts\Contracts\CartStore;
+use Daugt\Commerce\Carts\Stores\SessionCartStore;
+use Daugt\Commerce\Payments\PaymentProviderResolver;
 use Statamic\Providers\AddonServiceProvider;
 use Stripe\StripeClient;
-use Daugt\Commerce\Payments\PaymentProviderResolver;
 
 class ServiceProvider extends AddonServiceProvider
 {
@@ -28,6 +30,8 @@ class ServiceProvider extends AddonServiceProvider
         $this->app->singleton(PaymentProviderResolver::class, function ($app) {
             return new PaymentProviderResolver($app);
         });
+
+        $this->app->bind(CartStore::class, SessionCartStore::class);
 
         $this->app->singleton(StripeClient::class, function () {
             $secret = config('statamic.daugt-commerce.payment.providers.stripe.config.secret');
