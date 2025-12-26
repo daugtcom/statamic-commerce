@@ -12,6 +12,8 @@ class OrderEntry extends Entry
     public const STATUS = 'status';
     public const SUCCEEDED_AT = 'succeeded_at';
     public const ITEMS = 'items';
+    public const BILLING_ADDRESS = 'billing_address';
+    public const SHIPPING_ADDRESS = 'shipping_address';
     public const STRIPE_CHECKOUT_SESSION_ID = 'stripe_checkout_session_id';
 
     public function orderNumber(): ?int

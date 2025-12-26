@@ -3,6 +3,7 @@
 namespace Daugt\Commerce\Payments\Checkout;
 
 use Daugt\Commerce\Entries\ProductEntry;
+use Daugt\Commerce\Payments\PaymentProviderResolver;
 use Illuminate\Support\Facades\Route;
 use Statamic\Facades\Entry as EntryFacade;
 use Stripe\StripeClient;
@@ -37,6 +38,14 @@ class StripeCheckoutBuilder extends AbstractCheckoutBuilder
 
         if (! empty($params['success_url'])) {
             $payload['success_url'] = $params['success_url'];
+        }
+
+        $user = auth(config('statamic.users.guards.web', 'web'))->user();
+        if ($user) {
+            $customerId = app(PaymentProviderResolver::class)->store()->getCustomerId($user);
+            if ($customerId) {
+                $payload['customer'] = $customerId;
+            }
         }
 
         $session = $this->stripeClient->checkout->sessions->create($payload);

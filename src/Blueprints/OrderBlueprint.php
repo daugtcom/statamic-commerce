@@ -64,6 +64,19 @@ class OrderBlueprint
                             ],
                         ],
                         [
+                            'display' => 'daugt-commerce::orders.sections.customer',
+                            'fields' => [
+                                [
+                                    'handle' => 'billing_address',
+                                    'field' => $this->addressField('daugt-commerce::orders.fields.billing_address'),
+                                ],
+                                [
+                                    'handle' => 'shipping_address',
+                                    'field' => $this->addressField('daugt-commerce::orders.fields.shipping_address'),
+                                ],
+                            ],
+                        ],
+                        [
                             'display' => 'daugt-commerce::orders.sections.items',
                             'fields' => [
                                 [
@@ -123,5 +136,33 @@ class OrderBlueprint
         $blueprint->setContents($tabs);
 
         return $blueprint;
+    }
+
+    private function addressField(string $display, bool $readOnly = false): array
+    {
+        return [
+            'type' => 'group',
+            'display' => $display,
+            'fields' => [
+                [
+                    'import' => 'statamic-commerce::address',
+                    'config' => $readOnly ? $this->addressReadOnlyOverrides() : [],
+                ],
+            ],
+        ];
+    }
+
+    private function addressReadOnlyOverrides(): array
+    {
+        return [
+            'name' => ['read_only' => true],
+            'phone' => ['read_only' => true],
+            'line1' => ['read_only' => true],
+            'line2' => ['read_only' => true],
+            'city' => ['read_only' => true],
+            'state' => ['read_only' => true],
+            'postal_code' => ['read_only' => true],
+            'country' => ['read_only' => true],
+        ];
     }
 }

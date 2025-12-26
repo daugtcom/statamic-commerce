@@ -1,0 +1,26 @@
+title: daugt-commerce::address.title
+fields:
+  name:
+    type: text
+    display: daugt-commerce::address.fields.name
+  phone:
+    type: text
+    display: daugt-commerce::address.fields.phone
+  line1:
+    type: text
+    display: daugt-commerce::address.fields.line1
+  line2:
+    type: text
+    display: daugt-commerce::address.fields.line2
+  city:
+    type: text
+    display: daugt-commerce::address.fields.city
+  state:
+    type: text
+    display: daugt-commerce::address.fields.state
+  postal_code:
+    type: text
+    display: daugt-commerce::address.fields.postal_code
+  country:
+    type: text
+    display: daugt-commerce::address.fields.country
