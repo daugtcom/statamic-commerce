@@ -60,5 +60,6 @@
   "daugt-commerce::taxonomies.categories.fields.title": "Titel",
   "daugt-commerce::taxonomies.categories.fields.description": "Beschreibung",
   "daugt-commerce::taxonomies.categories.fields.image": "Bild",
-  "daugt-commerce::taxonomies.categories.fields.slug": "Slug"
+  "daugt-commerce::taxonomies.categories.fields.slug": "Slug",
+  "daugt-commerce::cart.subscription_limit": "Es kann nur ein Abonnement pro Checkout hinzugefügt werden."
 }

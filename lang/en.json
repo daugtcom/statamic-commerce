@@ -60,5 +60,6 @@
   "daugt-commerce::taxonomies.categories.fields.title": "Title",
   "daugt-commerce::taxonomies.categories.fields.description": "Description",
   "daugt-commerce::taxonomies.categories.fields.image": "Image",
-  "daugt-commerce::taxonomies.categories.fields.slug": "Slug"
+  "daugt-commerce::taxonomies.categories.fields.slug": "Slug",
+  "daugt-commerce::cart.subscription_limit": "Only one subscription can be added to a checkout."
 }

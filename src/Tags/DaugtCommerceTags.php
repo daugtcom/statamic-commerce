@@ -95,7 +95,7 @@ class DaugtCommerceTags extends Tags
         return $this->parseLoop($items);
     }
 
-    public function cartCount(): string|int
+    public function cartCount(): int
     {
         $manager = app(CartManager::class);
         $cart = $manager->get();

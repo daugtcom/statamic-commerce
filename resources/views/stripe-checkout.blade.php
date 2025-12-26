@@ -10,6 +10,6 @@
     // Mount Checkout
     checkout.mount('#checkout');
 </script>
-<div id="checkout">
+<div id="checkout" class="w-full h-full">
     <!-- Checkout will insert the payment form here -->
 </div>

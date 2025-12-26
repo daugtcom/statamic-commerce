@@ -15,7 +15,7 @@ class StripeCheckoutBuilder extends AbstractCheckoutBuilder
 
     public function build(array $params): ?array
     {
-        $mode = $params['mode'] ?? 'payment';
+        $mode = $params['mode'] ?? $this->defaultMode();
         $uiMode = $params['ui_mode'] ?? 'embedded';
         $lineItems = $this->buildLineItems($this->cartItems(true));
 
@@ -30,7 +30,9 @@ class StripeCheckoutBuilder extends AbstractCheckoutBuilder
         ];
 
         if (! empty($params['return_url'])) {
-            $payload['return_url'] = Route::current();
+            $payload['return_url'] = $params['return_url'];
+        } else {
+            $payload['return_url'] = url()->current();
         }
 
         if (! empty($params['success_url'])) {
@@ -81,5 +83,27 @@ class StripeCheckoutBuilder extends AbstractCheckoutBuilder
         }
 
         return $items;
+    }
+
+    private function defaultMode(): string
+    {
+        $cartItems = $this->cartItems(true);
+
+        foreach ($cartItems as $item) {
+            $entry = $item['entry'] ?? null;
+            if (! $entry) {
+                continue;
+            }
+
+            $billingType = method_exists($entry, 'billingType')
+                ? $entry->billingType()
+                : $entry->get(ProductEntry::BILLING_TYPE);
+
+            if ((string) $billingType === 'recurring') {
+                return 'subscription';
+            }
+        }
+
+        return 'payment';
     }
 }
