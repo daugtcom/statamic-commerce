@@ -9,6 +9,7 @@ use Daugt\Commerce\Enums\BillingType;
 use Daugt\Commerce\Enums\OrderStatus;
 use Daugt\Commerce\Enums\ShippingStatus;
 use Daugt\Commerce\Support\StripeAddress;
+use Daugt\Commerce\Support\StripePayload;
 use Statamic\Facades\Entry;
 use Statamic\Facades\User;
 use Stripe\StripeClient;
@@ -17,15 +18,10 @@ class CheckoutSessionCompleted extends StripeWebhookJob
 {
     public function handle(StripeClient $stripeClient): void
     {
-        $payload = $this->payload();
-        $session = $payload['data']['object'] ?? null;
-
-        if (! is_array($session)) {
-            return;
-        }
-
-        $sessionId = (string) ($session['id'] ?? '');
-        $customerId = (string) ($session['customer'] ?? '');
+        $payload = StripePayload::array($this->payload());
+        $session = StripePayload::array($payload, 'data.object');
+        $sessionId = StripePayload::string($session, 'id');
+        $customerId = StripePayload::string($session, 'customer');
 
         if ($sessionId === '' || $customerId === '') {
             return;
@@ -50,12 +46,16 @@ class CheckoutSessionCompleted extends StripeWebhookJob
         $order->set(OrderEntry::SUCCEEDED_AT, $status === OrderStatus::PAID->value ? now() : null);
         $order->set(OrderEntry::ITEMS, $items);
 
-        $billingAddress = StripeAddress::fromCustomerDetails($session['customer_details'] ?? null);
+        $billingAddress = StripeAddress::fromCustomerDetails(
+            StripePayload::array($session, 'customer_details')
+        );
         if ($billingAddress !== []) {
             $order->set(OrderEntry::BILLING_ADDRESS, $billingAddress);
         }
 
-        $shippingAddress = StripeAddress::fromShippingDetails($session['shipping_details'] ?? null);
+        $shippingAddress = StripeAddress::fromShippingDetails(
+            StripePayload::array($session, 'shipping_details')
+        );
         if ($shippingAddress !== []) {
             $order->set(OrderEntry::SHIPPING_ADDRESS, $shippingAddress);
         }
@@ -69,12 +69,12 @@ class CheckoutSessionCompleted extends StripeWebhookJob
 
     private function resolveStatus(array $payload, array $session): string
     {
-        $paymentStatus = (string) ($session['payment_status'] ?? '');
+        $paymentStatus = StripePayload::string($session, 'payment_status');
         if ($paymentStatus === 'paid') {
             return OrderStatus::PAID->value;
         }
 
-        $type = (string) ($payload['type'] ?? '');
+        $type = StripePayload::string($payload, 'type');
         if ($type === 'checkout.session.async_payment_failed' || $type === 'checkout.session.expired') {
             return OrderStatus::FAILED->value;
         }
@@ -94,16 +94,7 @@ class CheckoutSessionCompleted extends StripeWebhookJob
     private function fetchLineItems(StripeClient $stripeClient, string $sessionId): array
     {
         $response = $stripeClient->checkout->sessions->allLineItems($sessionId, ['limit' => 100]);
-
-        if (is_array($response)) {
-            $items = $response['data'] ?? [];
-        } elseif (is_object($response) && property_exists($response, 'data')) {
-            $items = $response->data;
-        } elseif (is_object($response) && method_exists($response, 'toArray')) {
-            $items = $response->toArray()['data'] ?? [];
-        } else {
-            $items = [];
-        }
+        $items = StripePayload::array($response, 'data');
 
         return $this->normalizeLineItems($items);
     }
@@ -111,7 +102,7 @@ class CheckoutSessionCompleted extends StripeWebhookJob
     private function buildItems(array $lineItems, array $existingItems, array $session): array
     {
         $items = [];
-        $subscriptionId = $session['subscription'] ?? null;
+        $subscriptionId = StripePayload::string($session, 'subscription');
 
         foreach ($lineItems as $lineItem) {
             $lineItem = $this->normalizeLineItem($lineItem);
@@ -128,14 +119,14 @@ class CheckoutSessionCompleted extends StripeWebhookJob
             $existing = $existingItems[$productId] ?? [];
             $shippingStatus = $existing['shipping_status'] ?? ShippingStatus::PENDING->value;
 
-            $isRecurring = ! empty($lineItem['price']['recurring']);
+            $isRecurring = StripePayload::array($lineItem, 'price.recurring') !== [];
 
             $items[] = array_filter([
                 'type' => 'item',
                 'product' => [$productId],
-                'quantity' => (int) ($lineItem['quantity'] ?? 1),
+                'quantity' => (int) (StripePayload::int($lineItem, 'quantity') ?? 1),
                 'shipping_status' => $shippingStatus,
-                'stripe_subscription_id' => $isRecurring && is_string($subscriptionId) ? $subscriptionId : null,
+                'stripe_subscription_id' => $isRecurring && $subscriptionId !== '' ? $subscriptionId : null,
             ], fn ($value) => $value !== null);
         }
 
@@ -144,41 +135,27 @@ class CheckoutSessionCompleted extends StripeWebhookJob
 
     private function findProduct(array $lineItem): ?ProductEntry
     {
-        $price = $lineItem['price'] ?? null;
-        $priceId = null;
-        $stripeProductId = null;
-        $billingType = null;
+        $priceId = StripePayload::string($lineItem, 'price');
+        $price = StripePayload::array($lineItem, 'price');
+        $stripeProductId = StripePayload::string($price, 'product');
+        $billingType = StripePayload::array($price, 'recurring') !== []
+            ? BillingType::RECURRING->value
+            : BillingType::ONE_TIME->value;
 
-        if (is_object($price) && method_exists($price, 'toArray')) {
-            $price = $price->toArray();
-        }
-
-        if (is_string($price)) {
-            $priceId = $price;
-        } elseif (is_array($price)) {
-            $priceId = $price['id'] ?? null;
-            $stripeProductId = $price['product'] ?? null;
-
-            if (is_object($stripeProductId) && method_exists($stripeProductId, 'toArray')) {
-                $stripeProductId = $stripeProductId->toArray();
-            }
-            if (is_array($stripeProductId)) {
-                $stripeProductId = $stripeProductId['id'] ?? null;
-            }
-
-            $billingType = ! empty($price['recurring']) ? BillingType::RECURRING->value : BillingType::ONE_TIME->value;
+        if ($priceId === '') {
+            $priceId = StripePayload::string($price, 'id');
         }
 
         $query = Entry::query()->where('collection', ProductEntry::COLLECTION);
 
-        if (is_string($priceId) && $priceId !== '') {
+        if ($priceId !== '') {
             $match = $query->where(ProductEntry::STRIPE_PRICE_ID, $priceId)->first();
             if ($match instanceof ProductEntry) {
                 return $match;
             }
         }
 
-        if (is_string($stripeProductId) && $stripeProductId !== '') {
+        if ($stripeProductId !== '') {
             $productQuery = $query;
             if ($billingType) {
                 $productQuery = $productQuery->where(ProductEntry::BILLING_TYPE, $billingType);
@@ -195,19 +172,13 @@ class CheckoutSessionCompleted extends StripeWebhookJob
 
     private function indexExistingItems(mixed $items): array
     {
-        if (! is_array($items)) {
-            return [];
-        }
-
+        $items = StripePayload::array($items);
         $indexed = [];
 
         foreach ($items as $item) {
-            if (! is_array($item)) {
-                continue;
-            }
-
+            $item = StripePayload::array($item);
             $productId = $this->firstId($item['product'] ?? null);
-            if (! $productId) {
+            if ($productId === '') {
                 continue;
             }
 
@@ -223,17 +194,13 @@ class CheckoutSessionCompleted extends StripeWebhookJob
             $value = $value[0] ?? null;
         }
 
-        if (is_string($value) && $value !== '') {
-            return $value;
-        }
-
-        return null;
+        return StripePayload::string($value) ?: null;
     }
 
     private function syncInvoice(StripeClient $stripeClient, OrderEntry $order, string $userId, array $session, string $status): void
     {
-        $invoiceId = $session['invoice'] ?? null;
-        if (! is_string($invoiceId) || $invoiceId === '') {
+        $invoiceId = StripePayload::string($session, 'invoice');
+        if ($invoiceId === '') {
             return;
         }
 
@@ -249,7 +216,8 @@ class CheckoutSessionCompleted extends StripeWebhookJob
         $invoice->set(InvoiceEntry::USER, $userId);
         $invoice->set(InvoiceEntry::STATUS, $status);
         $invoice->set(InvoiceEntry::NUMBER, $invoiceNumber);
-        $invoice->set(InvoiceEntry::STRIPE_PAYMENT_INTENT_ID, $session['payment_intent'] ?? null);
+        $paymentIntentId = StripePayload::string($session, 'payment_intent');
+        $invoice->set(InvoiceEntry::STRIPE_PAYMENT_INTENT_ID, $paymentIntentId ?: null);
         $invoice->set(InvoiceEntry::STRIPE_INVOICE_ID, $invoiceId);
 
         if (! $this->ensureEntryBlueprint($invoice)) {
@@ -291,8 +259,12 @@ class CheckoutSessionCompleted extends StripeWebhookJob
 
     private function syncUserAddresses($user, array $session): void
     {
-        $billing = StripeAddress::fromCustomerDetails($session['customer_details'] ?? null);
-        $shipping = StripeAddress::fromShippingDetails($session['shipping_details'] ?? null);
+        $billing = StripeAddress::fromCustomerDetails(
+            StripePayload::array($session, 'customer_details')
+        );
+        $shipping = StripeAddress::fromShippingDetails(
+            StripePayload::array($session, 'shipping_details')
+        );
 
         if ($billing !== []) {
             $user->set('billing_address', $billing);
@@ -315,28 +287,19 @@ class CheckoutSessionCompleted extends StripeWebhookJob
             return null;
         }
 
-        if (is_object($invoice) && method_exists($invoice, 'toArray')) {
-            $invoice = $invoice->toArray();
-        }
+        $invoice = StripePayload::array($invoice);
 
-        if (is_array($invoice) && isset($invoice['number']) && $invoice['number'] !== '') {
-            return (string) $invoice['number'];
-        }
-
-        return null;
+        return StripePayload::string($invoice, 'number') ?: null;
     }
 
     private function normalizeLineItems(mixed $items): array
     {
-        if (! is_array($items)) {
-            return [];
-        }
-
+        $items = StripePayload::array($items);
         $normalized = [];
 
         foreach ($items as $item) {
             $item = $this->normalizeLineItem($item);
-            if ($item) {
+            if ($item !== []) {
                 $normalized[] = $item;
             }
         }
@@ -344,19 +307,14 @@ class CheckoutSessionCompleted extends StripeWebhookJob
         return $normalized;
     }
 
-    private function normalizeLineItem(mixed $item): ?array
+    private function normalizeLineItem(mixed $item): array
     {
-        if (is_object($item) && method_exists($item, 'toArray')) {
-            $item = $item->toArray();
+        $item = StripePayload::array($item);
+        if ($item === []) {
+            return [];
         }
 
-        if (! is_array($item)) {
-            return null;
-        }
-
-        if (isset($item['price']) && is_object($item['price']) && method_exists($item['price'], 'toArray')) {
-            $item['price'] = $item['price']->toArray();
-        }
+        $item['price'] = StripePayload::array($item, 'price');
 
         return $item;
     }

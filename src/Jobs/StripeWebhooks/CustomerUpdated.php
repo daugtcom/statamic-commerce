@@ -3,20 +3,16 @@
 namespace Daugt\Commerce\Jobs\StripeWebhooks;
 
 use Daugt\Commerce\Support\StripeAddress;
+use Daugt\Commerce\Support\StripePayload;
 use Statamic\Facades\User;
 
 class CustomerUpdated extends StripeWebhookJob
 {
     public function handle(): void
     {
-        $payload = $this->payload();
-        $customer = $payload['data']['object'] ?? null;
-
-        if (! is_array($customer)) {
-            return;
-        }
-
-        $customerId = (string) ($customer['id'] ?? '');
+        $payload = StripePayload::array($this->payload());
+        $customer = StripePayload::array($payload, 'data.object');
+        $customerId = StripePayload::string($customer, 'id');
         if ($customerId === '') {
             return;
         }
@@ -27,7 +23,7 @@ class CustomerUpdated extends StripeWebhookJob
         }
 
         $billing = StripeAddress::fromCustomer($customer);
-        $shipping = StripeAddress::fromShipping($customer['shipping'] ?? null);
+        $shipping = StripeAddress::fromShipping(StripePayload::array($customer, 'shipping'));
 
         if ($billing !== []) {
             $user->set('billing_address', $billing);

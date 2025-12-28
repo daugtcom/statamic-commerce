@@ -5,20 +5,16 @@ namespace Daugt\Commerce\Jobs\StripeWebhooks;
 use Daugt\Commerce\Entries\InvoiceEntry;
 use Daugt\Commerce\Entries\OrderEntry;
 use Daugt\Commerce\Enums\InvoiceStatus;
+use Daugt\Commerce\Support\StripePayload;
 use Statamic\Facades\Entry;
 
 class InvoiceEvent extends StripeWebhookJob
 {
     public function handle(): void
     {
-        $payload = $this->payload();
-        $invoice = $payload['data']['object'] ?? null;
-
-        if (! is_array($invoice)) {
-            return;
-        }
-
-        $subscriptionId = (string) ($invoice['subscription'] ?? '');
+        $payload = StripePayload::array($this->payload());
+        $invoice = StripePayload::array($payload, 'data.object');
+        $subscriptionId = StripePayload::string($invoice, 'subscription');
         if ($subscriptionId === '') {
             return;
         }
@@ -29,7 +25,7 @@ class InvoiceEvent extends StripeWebhookJob
             return;
         }
 
-        $invoiceId = (string) ($invoice['id'] ?? '');
+        $invoiceId = StripePayload::string($invoice, 'id');
         if ($invoiceId === '') {
             return;
         }
@@ -46,7 +42,8 @@ class InvoiceEvent extends StripeWebhookJob
         $entry->set(InvoiceEntry::USER, $order->get(OrderEntry::USER));
         $entry->set(InvoiceEntry::STATUS, $status);
         $entry->set(InvoiceEntry::NUMBER, $this->resolveInvoiceNumber($invoice, $invoiceId));
-        $entry->set(InvoiceEntry::STRIPE_PAYMENT_INTENT_ID, $invoice['payment_intent'] ?? null);
+        $paymentIntentId = StripePayload::string($invoice, 'payment_intent');
+        $entry->set(InvoiceEntry::STRIPE_PAYMENT_INTENT_ID, $paymentIntentId ?: null);
         $entry->set(InvoiceEntry::STRIPE_INVOICE_ID, $invoiceId);
 
         if (! $this->ensureEntryBlueprint($entry)) {
@@ -60,12 +57,12 @@ class InvoiceEvent extends StripeWebhookJob
 
     private function resolveStatus(array $payload, array $invoice): string
     {
-        $type = (string) ($payload['type'] ?? '');
+        $type = StripePayload::string($payload, 'type');
 
         return match ($type) {
             'invoice.payment_succeeded' => InvoiceStatus::PAID->value,
             'invoice.payment_failed' => InvoiceStatus::FAILED->value,
-            default => $this->mapInvoiceStatus((string) ($invoice['status'] ?? '')),
+            default => $this->mapInvoiceStatus(StripePayload::string($invoice, 'status')),
         };
     }
 
@@ -80,12 +77,7 @@ class InvoiceEvent extends StripeWebhookJob
 
     private function resolveInvoiceNumber(array $invoice, string $invoiceId): string
     {
-        $number = $invoice['number'] ?? null;
-        if (is_string($number) && $number !== '') {
-            return $number;
-        }
-
-        return $invoiceId;
+        return StripePayload::string($invoice, 'number') ?: $invoiceId;
     }
 
     private function attachInvoiceToOrder(OrderEntry $order, string $invoiceEntryId): void

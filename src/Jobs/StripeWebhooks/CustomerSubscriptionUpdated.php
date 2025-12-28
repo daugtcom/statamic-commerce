@@ -6,6 +6,7 @@ use Daugt\Commerce\Entries\OrderEntry;
 use Daugt\Commerce\Entries\ProductEntry;
 use Daugt\Commerce\Enums\BillingType;
 use Daugt\Commerce\Services\OrderEntitlementService;
+use Daugt\Commerce\Support\StripePayload;
 use Carbon\Carbon;
 use Statamic\Facades\Entry;
 use Statamic\Facades\User;
@@ -14,14 +15,9 @@ class CustomerSubscriptionUpdated extends StripeWebhookJob
 {
     public function handle(): void
     {
-        $payload = $this->payload();
-        $subscription = $payload['data']['object'] ?? null;
-
-        if (! is_array($subscription)) {
-            return;
-        }
-
-        $subscriptionId = (string) ($subscription['id'] ?? '');
+        $payload = StripePayload::array($this->payload());
+        $subscription = StripePayload::array($payload, 'data.object');
+        $subscriptionId = StripePayload::string($subscription, 'id');
         if ($subscriptionId === '') {
             return;
         }
@@ -39,7 +35,7 @@ class CustomerSubscriptionUpdated extends StripeWebhookJob
             return;
         }
 
-        $customerId = (string) ($subscription['customer'] ?? '');
+        $customerId = StripePayload::string($subscription, 'customer');
         if ($customerId === '') {
             return;
         }
@@ -72,19 +68,19 @@ class CustomerSubscriptionUpdated extends StripeWebhookJob
 
     private function firstPrice(array $subscription): ?array
     {
-        $items = $subscription['items']['data'] ?? null;
-        if (is_array($items) && isset($items[0]) && is_array($items[0])) {
-            $price = $items[0]['price'] ?? null;
-            if (is_array($price)) {
-                return $price;
-            }
+        $items = StripePayload::array($subscription, 'items.data');
+        $firstItem = $items[0] ?? null;
+        $price = StripePayload::array($firstItem, 'price');
+
+        if ($price !== []) {
+            return $price;
         }
 
-        $plan = $subscription['plan'] ?? null;
-        if (is_array($plan)) {
+        $plan = StripePayload::array($subscription, 'plan');
+        if ($plan !== []) {
             return [
-                'id' => $plan['id'] ?? null,
-                'product' => $plan['product'] ?? null,
+                'id' => StripePayload::string($plan, 'id'),
+                'product' => StripePayload::string($plan, 'product'),
             ];
         }
 
@@ -93,21 +89,21 @@ class CustomerSubscriptionUpdated extends StripeWebhookJob
 
     private function findProduct(array $price): ?ProductEntry
     {
-        $priceId = $price['id'] ?? null;
-        $stripeProductId = $price['product'] ?? null;
+        $priceId = StripePayload::string($price, 'id');
+        $stripeProductId = StripePayload::string($price, 'product');
 
         $query = Entry::query()
             ->where('collection', ProductEntry::COLLECTION)
             ->where(ProductEntry::BILLING_TYPE, BillingType::RECURRING->value);
 
-        if (is_string($priceId) && $priceId !== '') {
+        if ($priceId !== '') {
             $match = $query->where(ProductEntry::STRIPE_PRICE_ID, $priceId)->first();
             if ($match instanceof ProductEntry) {
                 return $match;
             }
         }
 
-        if (is_string($stripeProductId) && $stripeProductId !== '') {
+        if ($stripeProductId !== '') {
             $match = $query->where(ProductEntry::STRIPE_PRODUCT_ID, $stripeProductId)->first();
             if ($match instanceof ProductEntry) {
                 return $match;
@@ -139,16 +135,10 @@ class CustomerSubscriptionUpdated extends StripeWebhookJob
 
     private function orderHasProduct(OrderEntry $order, string $productId): bool
     {
-        $items = $order->get(OrderEntry::ITEMS);
-        if (! is_array($items)) {
-            return false;
-        }
+        $items = StripePayload::array($order->get(OrderEntry::ITEMS));
 
         foreach ($items as $item) {
-            if (! is_array($item)) {
-                continue;
-            }
-
+            $item = StripePayload::array($item);
             if ($this->firstId($item['product'] ?? null) === $productId) {
                 return true;
             }
@@ -159,15 +149,16 @@ class CustomerSubscriptionUpdated extends StripeWebhookJob
 
     private function setSubscriptionIdForProduct(OrderEntry $order, string $productId, string $subscriptionId): bool
     {
-        $items = $order->get(OrderEntry::ITEMS);
-        if (! is_array($items)) {
+        $items = StripePayload::array($order->get(OrderEntry::ITEMS));
+        if ($items === []) {
             return false;
         }
 
         $changed = false;
 
         foreach ($items as $index => $item) {
-            if (! is_array($item)) {
+            $item = StripePayload::array($item);
+            if ($item === []) {
                 continue;
             }
 
@@ -175,7 +166,7 @@ class CustomerSubscriptionUpdated extends StripeWebhookJob
                 continue;
             }
 
-            if (($item['stripe_subscription_id'] ?? null) === $subscriptionId) {
+            if (StripePayload::string($item, 'stripe_subscription_id') === $subscriptionId) {
                 continue;
             }
 
@@ -193,19 +184,14 @@ class CustomerSubscriptionUpdated extends StripeWebhookJob
 
     private function orderProductIdsForSubscription(OrderEntry $order, string $subscriptionId): array
     {
-        $items = $order->get(OrderEntry::ITEMS);
-        if (! is_array($items)) {
-            return [];
-        }
+        $items = StripePayload::array($order->get(OrderEntry::ITEMS));
 
         $productIds = [];
 
         foreach ($items as $item) {
-            if (! is_array($item)) {
-                continue;
-            }
+            $item = StripePayload::array($item);
 
-            if ((string) ($item['stripe_subscription_id'] ?? '') !== $subscriptionId) {
+            if (StripePayload::string($item, 'stripe_subscription_id') !== $subscriptionId) {
                 continue;
             }
 
@@ -224,23 +210,19 @@ class CustomerSubscriptionUpdated extends StripeWebhookJob
             $value = $value[0] ?? null;
         }
 
-        if (is_string($value) && $value !== '') {
-            return $value;
-        }
-
-        return null;
+        return StripePayload::string($value) ?: null;
     }
 
     private function resolveSubscriptionEnd(array $subscription): ?Carbon
     {
-        $endedAt = $subscription['ended_at'] ?? null;
-        if (is_numeric($endedAt)) {
-            return Carbon::createFromTimestamp((int) $endedAt);
+        $endedAt = StripePayload::int($subscription, 'ended_at');
+        if ($endedAt) {
+            return Carbon::createFromTimestamp($endedAt);
         }
 
-        $cancelAt = $subscription['cancel_at'] ?? null;
-        if (is_numeric($cancelAt)) {
-            return Carbon::createFromTimestamp((int) $cancelAt);
+        $cancelAt = StripePayload::int($subscription, 'cancel_at');
+        if ($cancelAt) {
+            return Carbon::createFromTimestamp($cancelAt);
         }
 
         return null;
