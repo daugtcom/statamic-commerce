@@ -2,6 +2,7 @@
 
 namespace Daugt\Commerce\Entries;
 
+use Carbon\Carbon;
 use Statamic\Entries\Entry;
 
 class OrderEntry extends Entry
@@ -38,11 +39,11 @@ class OrderEntry extends Entry
         return $value !== null ? (string) $value : null;
     }
 
-    public function succeededAt(): ?string
+    public function succeededAt(): ?Carbon
     {
         $value = $this->get(self::SUCCEEDED_AT);
 
-        return $value !== null ? (string) $value : null;
+        return $value !== null ? Carbon::createFromTimestamp($value) : null;
     }
 
     public function stripeCheckoutSessionId(): ?string

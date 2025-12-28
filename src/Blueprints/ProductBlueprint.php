@@ -362,6 +362,9 @@ class ProductBlueprint
                             'default' => false,
                             'display' => 'daugt-commerce::products.fields.access_keep_accessible_after_expiry',
                             'instructions' => 'daugt-commerce::products.fields.access_keep_accessible_after_expiry_instructions',
+                            'if' => [
+                                'access_type' => 'not permanent',
+                            ],
                         ],
                     ],
                     [
@@ -371,6 +374,9 @@ class ProductBlueprint
                             'default' => false,
                             'display' => 'daugt-commerce::products.fields.access_keep_unlocked_when_active',
                             'instructions' => 'daugt-commerce::products.fields.access_keep_unlocked_when_active_instructions',
+                            'if' => [
+                                'access_type' => 'not permanent',
+                            ],
                         ],
                     ],
                 ],
