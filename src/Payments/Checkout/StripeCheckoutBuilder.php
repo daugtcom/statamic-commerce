@@ -30,6 +30,12 @@ class StripeCheckoutBuilder extends AbstractCheckoutBuilder
             'mode' => $mode,
         ];
 
+        if ($mode === 'payment') {
+            $payload['invoice_creation'] = [
+                'enabled' => $params['invoice_creation'] ?? true,
+            ];
+        }
+
         if (! empty($params['return_url'])) {
             $payload['return_url'] = $params['return_url'];
         } else {

@@ -10,7 +10,6 @@ use Daugt\Commerce\Entries\InvoiceEntry;
 use Daugt\Commerce\Entries\OrderEntry;
 use Daugt\Commerce\Enums\InvoiceStatus;
 use Daugt\Commerce\Jobs\StripeWebhooks\InvoiceEvent;
-use Spatie\WebhookClient\Models\WebhookCall;
 use Statamic\Facades\Blueprint;
 use Statamic\Facades\Entry;
 use Statamic\Facades\User;
@@ -56,6 +55,7 @@ class StripeWebhookInvoiceEventTest extends TestCase
             'data' => [
                 'object' => [
                     'id' => 'in_456',
+                    'number' => 'INV-456',
                     'subscription' => 'sub_456',
                     'payment_intent' => 'pi_456',
                     'status' => 'open',
@@ -63,7 +63,7 @@ class StripeWebhookInvoiceEventTest extends TestCase
             ],
         ];
 
-        $job = new InvoiceEvent(new WebhookCall(['payload' => $payload]));
+        $job = new InvoiceEvent($payload);
         $job->handle();
 
         $invoice = Entry::query()
@@ -73,6 +73,7 @@ class StripeWebhookInvoiceEventTest extends TestCase
 
         $this->assertInstanceOf(InvoiceEntry::class, $invoice);
         $this->assertSame(InvoiceStatus::FAILED->value, $invoice->get(InvoiceEntry::STATUS));
+        $this->assertSame('INV-456', $invoice->get(InvoiceEntry::NUMBER));
         $this->assertSame($order->id(), $this->firstId($invoice->get(InvoiceEntry::ORDER)));
         $this->assertSame($user->id(), $this->firstId($invoice->get(InvoiceEntry::USER)));
         $this->assertSame('pi_456', $invoice->get(InvoiceEntry::STRIPE_PAYMENT_INTENT_ID));

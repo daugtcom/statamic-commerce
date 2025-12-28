@@ -16,7 +16,7 @@ class InvoiceCollection
         $collection->revisionsEnabled(false);
         $collection->dated(false);
         $collection->requiresSlugs(false);
-        $collection->titleFormats('Invoice #{{ id }}');
+        $collection->titleFormats('Invoice #{{ if invoice_number }}{{ invoice_number }}{{ elseif stripe_invoice_id }}{{ stripe_invoice_id }}{{ else }}{{ id }}{{ /if }}');
 
         return $collection;
     }

@@ -45,9 +45,17 @@ class InvoiceEvent extends StripeWebhookJob
         $entry->set(InvoiceEntry::ORDER, $order->id());
         $entry->set(InvoiceEntry::USER, $order->get(OrderEntry::USER));
         $entry->set(InvoiceEntry::STATUS, $status);
+        $entry->set(InvoiceEntry::NUMBER, $this->resolveInvoiceNumber($invoice, $invoiceId));
         $entry->set(InvoiceEntry::STRIPE_PAYMENT_INTENT_ID, $invoice['payment_intent'] ?? null);
         $entry->set(InvoiceEntry::STRIPE_INVOICE_ID, $invoiceId);
+
+        if (! $this->ensureEntryBlueprint($entry)) {
+            return;
+        }
+
+        $this->ensureInvoiceTitleFormat();
         $entry->save();
+        $this->attachInvoiceToOrder($order, (string) $entry->id());
     }
 
     private function resolveStatus(array $payload, array $invoice): string
@@ -68,5 +76,33 @@ class InvoiceEvent extends StripeWebhookJob
             'uncollectible', 'void' => InvoiceStatus::FAILED->value,
             default => InvoiceStatus::PENDING->value,
         };
+    }
+
+    private function resolveInvoiceNumber(array $invoice, string $invoiceId): string
+    {
+        $number = $invoice['number'] ?? null;
+        if (is_string($number) && $number !== '') {
+            return $number;
+        }
+
+        return $invoiceId;
+    }
+
+    private function attachInvoiceToOrder(OrderEntry $order, string $invoiceEntryId): void
+    {
+        if ($invoiceEntryId === '') {
+            return;
+        }
+
+        $invoices = $order->get(OrderEntry::INVOICES);
+        if (! is_array($invoices)) {
+            $invoices = [];
+        }
+
+        if (! in_array($invoiceEntryId, $invoices, true)) {
+            $invoices[] = $invoiceEntryId;
+            $order->set(OrderEntry::INVOICES, $invoices);
+            $order->saveQuietly();
+        }
     }
 }

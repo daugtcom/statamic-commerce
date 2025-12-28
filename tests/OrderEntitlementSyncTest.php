@@ -5,6 +5,7 @@ namespace Daugt\Commerce\Tests;
 use Carbon\Carbon;
 use Daugt\Access\Entries\EntitlementEntry;
 use Daugt\Access\Services\AccessService;
+use Daugt\Access\Blueprints\EntitlementBlueprint;
 use Daugt\Commerce\Blueprints\OrderBlueprint;
 use Daugt\Commerce\Blueprints\OrderCollection;
 use Daugt\Commerce\Blueprints\ProductBlueprint;
@@ -13,6 +14,7 @@ use Daugt\Commerce\Entries\OrderEntry;
 use Daugt\Commerce\Entries\ProductEntry;
 use Daugt\Commerce\Enums\AccessType;
 use Daugt\Commerce\Enums\OrderStatus;
+use Daugt\Commerce\Services\OrderEntitlementService;
 use Statamic\Facades\Blueprint;
 use Statamic\Facades\Collection as CollectionFacade;
 use Statamic\Facades\Entry;
@@ -43,6 +45,12 @@ class OrderEntitlementSyncTest extends TestCase
             ->entryClass(EntitlementEntry::class)
             ->title('Entitlements')
             ->save();
+
+        if (class_exists(EntitlementBlueprint::class)) {
+            $entitlementBlueprint = (new EntitlementBlueprint())();
+            $entitlementBlueprint->setHandle('collections/entitlements/entitlement');
+            Blueprint::save($entitlementBlueprint);
+        }
 
         CollectionFacade::make('courses')
             ->title('Courses')
@@ -152,10 +160,8 @@ class OrderEntitlementSyncTest extends TestCase
         ]);
 
         $entitlement = $this->entitlements()->first();
-        $validity = $entitlement->get(EntitlementEntry::VALIDITY);
-
-        $this->assertSame('2024-02-01 00:00:00', $validity['start']);
-        $this->assertSame('2024-03-01 00:00:00', $validity['end']);
+        $this->assertSame('2024-02-01 00:00:00', $entitlement->get(EntitlementEntry::VALIDITY_START));
+        $this->assertSame('2024-03-01 00:00:00', $entitlement->get(EntitlementEntry::VALIDITY_END));
     }
 
     public function test_creates_duration_entitlements(): void
@@ -180,10 +186,95 @@ class OrderEntitlementSyncTest extends TestCase
         ]);
 
         $entitlement = $this->entitlements()->first();
-        $validity = $entitlement->get(EntitlementEntry::VALIDITY);
+        $this->assertSame('2024-01-01 00:00:00', $entitlement->get(EntitlementEntry::VALIDITY_START));
+        $this->assertSame('2024-03-01 00:00:00', $entitlement->get(EntitlementEntry::VALIDITY_END));
 
-        $this->assertSame('2024-01-01 00:00:00', $validity['start']);
-        $this->assertSame('2024-03-01 00:00:00', $validity['end']);
+        Carbon::setTestNow();
+    }
+
+    public function test_permanent_access_from_payment_date_sets_validity_range(): void
+    {
+        $user = User::make()->email('permanent@example.test');
+        $user->saveQuietly();
+
+        $target = Entry::make()->collection('courses');
+        $target->set('title', 'Course F');
+        $target->saveQuietly();
+
+        $product = $this->makeProductWithAccessItem($target->id(), [
+            'access_type' => AccessType::PERMANENT->value,
+            'access_permanent_from_payment_date' => true,
+        ]);
+
+        $order = $this->makeOrder($user->id(), OrderStatus::PAID->value, [
+            $this->orderItem($product->id()),
+        ], '2024-01-05 10:00:00');
+
+        $entitlement = $this->entitlements()->first();
+        $this->assertSame('2024-01-05 10:00:00', $entitlement->get(EntitlementEntry::VALIDITY_START));
+        $this->assertNull($entitlement->get(EntitlementEntry::VALIDITY_END));
+        $this->assertFalse((bool) $entitlement->get(EntitlementEntry::KEEP_ACCESSIBLE_AFTER_EXPIRY));
+        $this->assertFalse((bool) $entitlement->get(EntitlementEntry::KEEP_UNLOCKED_WHEN_ACTIVE));
+    }
+
+    public function test_access_flags_are_copied_to_entitlement(): void
+    {
+        $user = User::make()->email('flags@example.test');
+        $user->saveQuietly();
+
+        $target = Entry::make()->collection('courses');
+        $target->set('title', 'Course G');
+        $target->saveQuietly();
+
+        $product = $this->makeProductWithAccessItem($target->id(), [
+            'access_type' => AccessType::DATE_RANGE->value,
+            'date_range' => [
+                'start' => '2024-02-01 00:00:00',
+                'end' => '2024-03-01 00:00:00',
+            ],
+            'access_keep_accessible_after_expiry' => true,
+            'access_keep_unlocked_when_active' => true,
+        ]);
+
+        $this->makeOrder($user->id(), OrderStatus::PAID->value, [
+            $this->orderItem($product->id()),
+        ]);
+
+        $entitlement = $this->entitlements()->first();
+
+        $this->assertTrue((bool) $entitlement->get(EntitlementEntry::KEEP_ACCESSIBLE_AFTER_EXPIRY));
+        $this->assertTrue((bool) $entitlement->get(EntitlementEntry::KEEP_UNLOCKED_WHEN_ACTIVE));
+    }
+
+    public function test_subscription_end_caps_entitlement_end_date(): void
+    {
+        Carbon::setTestNow(Carbon::parse('2024-01-01 00:00:00'));
+
+        $user = User::make()->email('cancelled@example.test');
+        $user->saveQuietly();
+
+        $target = Entry::make()->collection('courses');
+        $target->set('title', 'Course F');
+        $target->saveQuietly();
+
+        $product = $this->makeProductWithAccessItem($target->id(), [
+            'access_type' => AccessType::DURATION->value,
+            'access_duration_iterations' => 2,
+            'access_duration_unit' => 'month',
+        ]);
+
+        $order = $this->makeOrder($user->id(), OrderStatus::PAID->value, [
+            $this->orderItem($product->id()),
+        ]);
+
+        $entitlement = $this->entitlements()->first();
+        $this->assertSame('2024-03-01 00:00:00', $entitlement->get(EntitlementEntry::VALIDITY_END));
+
+        $endsAt = Carbon::parse('2024-01-15 00:00:00');
+        app(OrderEntitlementService::class)->applySubscriptionEnd($order, (string) $product->id(), $endsAt);
+
+        $entitlement = $this->entitlements()->first();
+        $this->assertSame('2024-01-15 00:00:00', $entitlement->get(EntitlementEntry::VALIDITY_END));
 
         Carbon::setTestNow();
     }
@@ -205,12 +296,15 @@ class OrderEntitlementSyncTest extends TestCase
         return $product;
     }
 
-    private function makeOrder(string $userId, string $status, array $items): OrderEntry
+    private function makeOrder(string $userId, string $status, array $items, ?string $succeededAt = null): OrderEntry
     {
         $order = Entry::make()->collection(OrderEntry::COLLECTION);
         $order->set(OrderEntry::USER, $userId);
         $order->set(OrderEntry::STATUS, $status);
         $order->set(OrderEntry::ITEMS, $items);
+        if ($succeededAt) {
+            $order->set(OrderEntry::SUCCEEDED_AT, $succeededAt);
+        }
         $order->save();
 
         return $order;

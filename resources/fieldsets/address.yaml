@@ -3,24 +3,32 @@ fields:
   name:
     type: text
     display: daugt-commerce::address.fields.name
+    width: 50
   phone:
     type: text
     display: daugt-commerce::address.fields.phone
+    width: 50
   line1:
     type: text
     display: daugt-commerce::address.fields.line1
+    width: 50
   line2:
     type: text
     display: daugt-commerce::address.fields.line2
-  city:
-    type: text
-    display: daugt-commerce::address.fields.city
-  state:
-    type: text
-    display: daugt-commerce::address.fields.state
+    width: 50
   postal_code:
     type: text
     display: daugt-commerce::address.fields.postal_code
+    width: 33
+  city:
+    type: text
+    display: daugt-commerce::address.fields.city
+    width: 33
+  state:
+    type: text
+    display: daugt-commerce::address.fields.state
+    width: 33
   country:
     type: text
     display: daugt-commerce::address.fields.country
+    width: 50

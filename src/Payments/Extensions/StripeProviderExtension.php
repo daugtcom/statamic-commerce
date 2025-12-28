@@ -38,9 +38,6 @@ class StripeProviderExtension extends AbstractPaymentProviderExtension
             'display' => 'daugt-commerce::users.fields.stripe_id',
             'read_only' => true,
         ], 'sidebar');
-
-        $blueprint->ensureField('billing_address', $this->addressField('daugt-commerce::users.fields.billing_address', true), 'main');
-        $blueprint->ensureField('shipping_address', $this->addressField('daugt-commerce::users.fields.shipping_address', true), 'main');
     }
 
     public static function entryTabsToRemove(string $collectionHandle): array
@@ -58,7 +55,7 @@ class StripeProviderExtension extends AbstractPaymentProviderExtension
 
     public static function userFieldsToRemove(): array
     {
-        return ['stripe_id', 'billing_address', 'shipping_address'];
+        return ['stripe_id'];
     }
 
     public function checkoutView(array $params): ?array
@@ -138,33 +135,6 @@ class StripeProviderExtension extends AbstractPaymentProviderExtension
         ];
     }
 
-    private function addressField(string $display, bool $readOnly = false): array
-    {
-        return [
-            'type' => 'group',
-            'display' => $display,
-            'fields' => [
-                [
-                    'import' => 'statamic-commerce::address',
-                    'config' => $readOnly ? $this->addressReadOnlyOverrides() : [],
-                ],
-            ],
-        ];
-    }
-
-    private function addressReadOnlyOverrides(): array
-    {
-        return [
-            'name' => ['read_only' => true],
-            'phone' => ['read_only' => true],
-            'line1' => ['read_only' => true],
-            'line2' => ['read_only' => true],
-            'city' => ['read_only' => true],
-            'state' => ['read_only' => true],
-            'postal_code' => ['read_only' => true],
-            'country' => ['read_only' => true],
-        ];
-    }
 
     private function ensureStripeOrderItemField(StatamicBlueprint $blueprint): void
     {
@@ -205,6 +175,9 @@ class StripeProviderExtension extends AbstractPaymentProviderExtension
                         'display' => 'daugt-commerce::orders.fields.item_stripe_subscription_id',
                         'read_only' => true,
                         'width' => 33,
+                        'if' => [
+                            'stripe_subscription_id' => 'not empty',
+                        ],
                     ],
                 ];
 

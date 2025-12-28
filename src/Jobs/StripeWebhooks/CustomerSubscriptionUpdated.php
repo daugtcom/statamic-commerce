@@ -5,6 +5,8 @@ namespace Daugt\Commerce\Jobs\StripeWebhooks;
 use Daugt\Commerce\Entries\OrderEntry;
 use Daugt\Commerce\Entries\ProductEntry;
 use Daugt\Commerce\Enums\BillingType;
+use Daugt\Commerce\Services\OrderEntitlementService;
+use Carbon\Carbon;
 use Statamic\Facades\Entry;
 use Statamic\Facades\User;
 
@@ -24,7 +26,16 @@ class CustomerSubscriptionUpdated extends StripeWebhookJob
             return;
         }
 
-        if ($this->findOrderBySubscriptionId($subscriptionId)) {
+        $order = $this->findOrderBySubscriptionId($subscriptionId);
+        $endsAt = $this->resolveSubscriptionEnd($subscription);
+
+        if ($order) {
+            if ($endsAt) {
+                foreach ($this->orderProductIdsForSubscription($order, $subscriptionId) as $productId) {
+                    app(OrderEntitlementService::class)->applySubscriptionEnd($order, $productId, $endsAt);
+                }
+            }
+
             return;
         }
 
@@ -52,6 +63,10 @@ class CustomerSubscriptionUpdated extends StripeWebhookJob
 
         if ($this->setSubscriptionIdForProduct($order, (string) $product->id(), $subscriptionId)) {
             $order->save();
+        }
+
+        if ($endsAt) {
+            app(OrderEntitlementService::class)->applySubscriptionEnd($order, (string) $product->id(), $endsAt);
         }
     }
 
@@ -176,6 +191,33 @@ class CustomerSubscriptionUpdated extends StripeWebhookJob
         return $changed;
     }
 
+    private function orderProductIdsForSubscription(OrderEntry $order, string $subscriptionId): array
+    {
+        $items = $order->get(OrderEntry::ITEMS);
+        if (! is_array($items)) {
+            return [];
+        }
+
+        $productIds = [];
+
+        foreach ($items as $item) {
+            if (! is_array($item)) {
+                continue;
+            }
+
+            if ((string) ($item['stripe_subscription_id'] ?? '') !== $subscriptionId) {
+                continue;
+            }
+
+            $productId = $this->firstId($item['product'] ?? null);
+            if ($productId) {
+                $productIds[] = $productId;
+            }
+        }
+
+        return array_values(array_unique($productIds));
+    }
+
     private function firstId(mixed $value): ?string
     {
         if (is_array($value)) {
@@ -184,6 +226,21 @@ class CustomerSubscriptionUpdated extends StripeWebhookJob
 
         if (is_string($value) && $value !== '') {
             return $value;
+        }
+
+        return null;
+    }
+
+    private function resolveSubscriptionEnd(array $subscription): ?Carbon
+    {
+        $endedAt = $subscription['ended_at'] ?? null;
+        if (is_numeric($endedAt)) {
+            return Carbon::createFromTimestamp((int) $endedAt);
+        }
+
+        $cancelAt = $subscription['cancel_at'] ?? null;
+        if (is_numeric($cancelAt)) {
+            return Carbon::createFromTimestamp((int) $cancelAt);
         }
 
         return null;

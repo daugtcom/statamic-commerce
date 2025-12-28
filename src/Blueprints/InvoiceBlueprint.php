@@ -30,7 +30,7 @@ class InvoiceBlueprint
                                         'type' => 'entries',
                                         'display' => 'daugt-commerce::invoices.fields.order',
                                         'read_only' => true,
-                                        'width' => 50,
+                                        'width' => 33,
                                     ],
                                 ],
                                 [
@@ -40,7 +40,16 @@ class InvoiceBlueprint
                                         'max_items' => 1,
                                         'display' => 'daugt-commerce::invoices.fields.user',
                                         'read_only' => true,
-                                        'width' => 50,
+                                        'width' => 33,
+                                    ],
+                                ],
+                                [
+                                    'handle' => 'invoice_number',
+                                    'field' => [
+                                        'type' => 'text',
+                                        'display' => 'daugt-commerce::invoices.fields.number',
+                                        'read_only' => true,
+                                        'width' => 33,
                                     ],
                                 ],
                                 [
@@ -51,6 +60,7 @@ class InvoiceBlueprint
                                         'type' => 'dictionary',
                                         'display' => 'daugt-commerce::invoices.fields.status',
                                         'max_items' => 1,
+                                        'read_only' => true,
                                     ],
                                 ],
                             ],

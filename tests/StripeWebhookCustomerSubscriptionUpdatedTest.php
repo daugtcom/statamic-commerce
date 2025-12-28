@@ -10,7 +10,6 @@ use Daugt\Commerce\Entries\OrderEntry;
 use Daugt\Commerce\Entries\ProductEntry;
 use Daugt\Commerce\Enums\BillingType;
 use Daugt\Commerce\Jobs\StripeWebhooks\CustomerSubscriptionUpdated;
-use Spatie\WebhookClient\Models\WebhookCall;
 use Statamic\Facades\Blueprint;
 use Statamic\Facades\Collection as CollectionFacade;
 use Statamic\Facades\Entry;
@@ -78,7 +77,7 @@ class StripeWebhookCustomerSubscriptionUpdatedTest extends TestCase
             ],
         ];
 
-        $job = new CustomerSubscriptionUpdated(new WebhookCall(['payload' => $payload]));
+        $job = new CustomerSubscriptionUpdated($payload);
         $job->handle();
 
         $updated = Entry::find($order->id());

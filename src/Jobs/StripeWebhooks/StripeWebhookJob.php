@@ -2,15 +2,56 @@
 
 namespace Daugt\Commerce\Jobs\StripeWebhooks;
 
+use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Foundation\Bus\Dispatchable;
+use Illuminate\Queue\InteractsWithQueue;
+use Illuminate\Queue\SerializesModels;
 use Daugt\Commerce\Entries\OrderEntry;
+use Daugt\Commerce\Entries\InvoiceEntry;
+use Statamic\Facades\Collection as CollectionFacade;
 use Statamic\Facades\Entry;
-use Spatie\WebhookClient\Jobs\ProcessWebhookJob;
 
-abstract class StripeWebhookJob extends ProcessWebhookJob
+abstract class StripeWebhookJob implements ShouldQueue
 {
+    use Dispatchable;
+    use InteractsWithQueue;
+    use Queueable;
+    use SerializesModels;
+
+    public function __construct(protected array $payload)
+    {
+    }
+
     protected function payload(): array
     {
-        return $this->webhookCall->payload ?? [];
+        return $this->payload ?? [];
+    }
+
+    protected function ensureEntryBlueprint($entry): bool
+    {
+        if (! method_exists($entry, 'collection')) {
+            return false;
+        }
+
+        $collection = $entry->collection();
+        if (! $collection) {
+            return false;
+        }
+
+        $handle = $entry->get('blueprint');
+        if (is_string($handle) && $handle !== '') {
+            return true;
+        }
+
+        $blueprint = $collection->entryBlueprint();
+        if (! $blueprint) {
+            return false;
+        }
+
+        $entry->blueprint($blueprint->handle());
+
+        return true;
     }
 
     protected function findOrderBySubscriptionId(string $subscriptionId): ?OrderEntry
@@ -54,5 +95,30 @@ abstract class StripeWebhookJob extends ProcessWebhookJob
         }
 
         return false;
+    }
+
+    protected function ensureInvoiceTitleFormat(): void
+    {
+        $collection = CollectionFacade::find(InvoiceEntry::COLLECTION);
+        if (! $collection) {
+            return;
+        }
+
+        $format = 'Invoice #{{ if invoice_number }}{{ invoice_number }}{{ elseif stripe_invoice_id }}{{ stripe_invoice_id }}{{ else }}{{ id }}{{ /if }}';
+        $site = $collection->sites()->first();
+        if (is_string($site)) {
+            $siteHandle = $site;
+        } elseif (is_object($site) && method_exists($site, 'handle')) {
+            $siteHandle = $site->handle();
+        } else {
+            $siteHandle = null;
+        }
+
+        $current = $siteHandle ? $collection->titleFormat($siteHandle) : null;
+
+        if ($current !== $format) {
+            $collection->titleFormats($format);
+            $collection->save();
+        }
     }
 }

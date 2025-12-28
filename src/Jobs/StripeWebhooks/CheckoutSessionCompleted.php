@@ -60,6 +60,7 @@ class CheckoutSessionCompleted extends StripeWebhookJob
             $order->set(OrderEntry::SHIPPING_ADDRESS, $shippingAddress);
         }
 
+        $this->ensureEntryBlueprint($order);
         $order->save();
 
         $this->syncInvoice($stripeClient, $order, $user->id(), $session, $status);
@@ -93,9 +94,18 @@ class CheckoutSessionCompleted extends StripeWebhookJob
     private function fetchLineItems(StripeClient $stripeClient, string $sessionId): array
     {
         $response = $stripeClient->checkout->sessions->allLineItems($sessionId, ['limit' => 100]);
-        $items = $response['data'] ?? [];
 
-        return is_array($items) ? $items : [];
+        if (is_array($response)) {
+            $items = $response['data'] ?? [];
+        } elseif (is_object($response) && property_exists($response, 'data')) {
+            $items = $response->data;
+        } elseif (is_object($response) && method_exists($response, 'toArray')) {
+            $items = $response->toArray()['data'] ?? [];
+        } else {
+            $items = [];
+        }
+
+        return $this->normalizeLineItems($items);
     }
 
     private function buildItems(array $lineItems, array $existingItems, array $session): array
@@ -104,7 +114,8 @@ class CheckoutSessionCompleted extends StripeWebhookJob
         $subscriptionId = $session['subscription'] ?? null;
 
         foreach ($lineItems as $lineItem) {
-            if (! is_array($lineItem)) {
+            $lineItem = $this->normalizeLineItem($lineItem);
+            if (! $lineItem) {
                 continue;
             }
 
@@ -133,14 +144,32 @@ class CheckoutSessionCompleted extends StripeWebhookJob
 
     private function findProduct(array $lineItem): ?ProductEntry
     {
-        $price = $lineItem['price'] ?? [];
-        $priceId = $price['id'] ?? null;
-        $stripeProductId = $price['product'] ?? null;
-        $billingType = ! empty($price['recurring']) ? BillingType::RECURRING->value : BillingType::ONE_TIME->value;
+        $price = $lineItem['price'] ?? null;
+        $priceId = null;
+        $stripeProductId = null;
+        $billingType = null;
 
-        $query = Entry::query()
-            ->where('collection', ProductEntry::COLLECTION)
-            ->where(ProductEntry::BILLING_TYPE, $billingType);
+        if (is_object($price) && method_exists($price, 'toArray')) {
+            $price = $price->toArray();
+        }
+
+        if (is_string($price)) {
+            $priceId = $price;
+        } elseif (is_array($price)) {
+            $priceId = $price['id'] ?? null;
+            $stripeProductId = $price['product'] ?? null;
+
+            if (is_object($stripeProductId) && method_exists($stripeProductId, 'toArray')) {
+                $stripeProductId = $stripeProductId->toArray();
+            }
+            if (is_array($stripeProductId)) {
+                $stripeProductId = $stripeProductId['id'] ?? null;
+            }
+
+            $billingType = ! empty($price['recurring']) ? BillingType::RECURRING->value : BillingType::ONE_TIME->value;
+        }
+
+        $query = Entry::query()->where('collection', ProductEntry::COLLECTION);
 
         if (is_string($priceId) && $priceId !== '') {
             $match = $query->where(ProductEntry::STRIPE_PRICE_ID, $priceId)->first();
@@ -150,7 +179,12 @@ class CheckoutSessionCompleted extends StripeWebhookJob
         }
 
         if (is_string($stripeProductId) && $stripeProductId !== '') {
-            $match = $query->where(ProductEntry::STRIPE_PRODUCT_ID, $stripeProductId)->first();
+            $productQuery = $query;
+            if ($billingType) {
+                $productQuery = $productQuery->where(ProductEntry::BILLING_TYPE, $billingType);
+            }
+
+            $match = $productQuery->where(ProductEntry::STRIPE_PRODUCT_ID, $stripeProductId)->first();
             if ($match instanceof ProductEntry) {
                 return $match;
             }
@@ -209,12 +243,22 @@ class CheckoutSessionCompleted extends StripeWebhookJob
             ->first()
             ?? Entry::make()->collection(InvoiceEntry::COLLECTION);
 
+        $invoiceNumber = $this->resolveInvoiceNumber($stripeClient, $invoiceId) ?: $invoiceId;
+
         $invoice->set(InvoiceEntry::ORDER, $order->id());
         $invoice->set(InvoiceEntry::USER, $userId);
         $invoice->set(InvoiceEntry::STATUS, $status);
+        $invoice->set(InvoiceEntry::NUMBER, $invoiceNumber);
         $invoice->set(InvoiceEntry::STRIPE_PAYMENT_INTENT_ID, $session['payment_intent'] ?? null);
         $invoice->set(InvoiceEntry::STRIPE_INVOICE_ID, $invoiceId);
+
+        if (! $this->ensureEntryBlueprint($invoice)) {
+            return;
+        }
+
+        $this->ensureInvoiceTitleFormat();
         $invoice->save();
+        $this->attachInvoiceToOrder($order, (string) $invoice->id());
 
         try {
             $stripeClient->invoices->update($invoiceId, [
@@ -224,6 +268,24 @@ class CheckoutSessionCompleted extends StripeWebhookJob
             ]);
         } catch (\Throwable) {
             // Ignore metadata update failures.
+        }
+    }
+
+    private function attachInvoiceToOrder(OrderEntry $order, string $invoiceEntryId): void
+    {
+        if ($invoiceEntryId === '') {
+            return;
+        }
+
+        $invoices = $order->get(OrderEntry::INVOICES);
+        if (! is_array($invoices)) {
+            $invoices = [];
+        }
+
+        if (! in_array($invoiceEntryId, $invoices, true)) {
+            $invoices[] = $invoiceEntryId;
+            $order->set(OrderEntry::INVOICES, $invoices);
+            $order->saveQuietly();
         }
     }
 
@@ -243,5 +305,59 @@ class CheckoutSessionCompleted extends StripeWebhookJob
         if ($billing !== [] || $shipping !== []) {
             $user->saveQuietly();
         }
+    }
+
+    private function resolveInvoiceNumber(StripeClient $stripeClient, string $invoiceId): ?string
+    {
+        try {
+            $invoice = $stripeClient->invoices->retrieve($invoiceId);
+        } catch (\Throwable) {
+            return null;
+        }
+
+        if (is_object($invoice) && method_exists($invoice, 'toArray')) {
+            $invoice = $invoice->toArray();
+        }
+
+        if (is_array($invoice) && isset($invoice['number']) && $invoice['number'] !== '') {
+            return (string) $invoice['number'];
+        }
+
+        return null;
+    }
+
+    private function normalizeLineItems(mixed $items): array
+    {
+        if (! is_array($items)) {
+            return [];
+        }
+
+        $normalized = [];
+
+        foreach ($items as $item) {
+            $item = $this->normalizeLineItem($item);
+            if ($item) {
+                $normalized[] = $item;
+            }
+        }
+
+        return $normalized;
+    }
+
+    private function normalizeLineItem(mixed $item): ?array
+    {
+        if (is_object($item) && method_exists($item, 'toArray')) {
+            $item = $item->toArray();
+        }
+
+        if (! is_array($item)) {
+            return null;
+        }
+
+        if (isset($item['price']) && is_object($item['price']) && method_exists($item['price'], 'toArray')) {
+            $item['price'] = $item['price']->toArray();
+        }
+
+        return $item;
     }
 }

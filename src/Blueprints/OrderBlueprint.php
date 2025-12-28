@@ -3,6 +3,7 @@
 namespace Daugt\Commerce\Blueprints;
 
 use Daugt\Commerce\Entries\ProductEntry;
+use Daugt\Commerce\Entries\InvoiceEntry;
 use Daugt\Commerce\Enums\OrderStatus;
 use Daugt\Commerce\Enums\ShippingStatus;
 use Statamic\Facades\Blueprint as BlueprintFacade;
@@ -85,6 +86,7 @@ class OrderBlueprint
                                         'type' => 'replicator',
                                         'display' => 'daugt-commerce::orders.fields.items',
                                         'button_label' => 'daugt-commerce::orders.fields.items_button',
+                                        'read_only' => true,
                                         'sets' => [
                                             'item' => [
                                                 'display' => 'daugt-commerce::orders.fields.item',
@@ -97,6 +99,7 @@ class OrderBlueprint
                                                             'max_items' => 1,
                                                             'type' => 'entries',
                                                             'display' => 'daugt-commerce::orders.fields.item_product',
+                                                            'read_only' => true,
                                                         ],
                                                     ],
                                                     [
@@ -108,6 +111,7 @@ class OrderBlueprint
                                                             'type' => 'integer',
                                                             'display' => 'daugt-commerce::orders.fields.item_quantity',
                                                             'width' => 33,
+                                                            'read_only' => true,
                                                         ],
                                                     ],
                                                     [
@@ -119,11 +123,27 @@ class OrderBlueprint
                                                             'display' => 'daugt-commerce::orders.fields.item_shipping_status',
                                                             'width' => 33,
                                                             'max_items' => 1,
+                                                            'read_only' => true,
                                                         ],
                                                     ],
                                                 ],
                                             ],
                                         ],
+                                    ],
+                                ],
+                            ],
+                        ],
+                        [
+                            'display' => 'daugt-commerce::orders.sections.invoices',
+                            'fields' => [
+                                [
+                                    'handle' => 'invoices',
+                                    'field' => [
+                                        'collections' => [InvoiceEntry::COLLECTION],
+                                        'mode' => 'select',
+                                        'type' => 'entries',
+                                        'display' => 'daugt-commerce::orders.fields.invoices',
+                                        'read_only' => true,
                                     ],
                                 ],
                             ],
@@ -143,6 +163,8 @@ class OrderBlueprint
         return [
             'type' => 'group',
             'display' => $display,
+            'collapsible' => true,
+            'collapsed' => true,
             'fields' => [
                 [
                     'import' => 'statamic-commerce::address',

@@ -3,7 +3,6 @@
 namespace Daugt\Commerce\Tests;
 
 use Daugt\Commerce\Jobs\StripeWebhooks\CustomerUpdated;
-use Spatie\WebhookClient\Models\WebhookCall;
 use Statamic\Facades\User;
 
 class StripeWebhookCustomerUpdatedTest extends TestCase
@@ -41,7 +40,7 @@ class StripeWebhookCustomerUpdatedTest extends TestCase
             ],
         ];
 
-        $job = new CustomerUpdated(new WebhookCall(['payload' => $payload]));
+        $job = new CustomerUpdated($payload);
         $job->handle();
 
         $updated = User::find($user->id());

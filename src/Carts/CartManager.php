@@ -46,6 +46,7 @@ class CartManager
 
         $cart = $this->normalizeCart($this->store->get());
         $isSubscription = $this->isSubscriptionProduct($productId);
+        $allowsMultiple = $this->allowsMultipleQuantity($productId);
         $adjusted = false;
 
         if ($isSubscription) {
@@ -64,9 +65,15 @@ class CartManager
             }
         }
 
+        if (! $isSubscription && ! $allowsMultiple && $quantity !== 1) {
+            $quantity = 1;
+        }
+
         $items = $cart['items'];
 
         if ($isSubscription) {
+            $items[$productId] = 1;
+        } elseif (! $allowsMultiple) {
             $items[$productId] = 1;
         } else {
             $items[$productId] = ($items[$productId] ?? 0) + $quantity;
@@ -96,6 +103,8 @@ class CartManager
             if ($this->isSubscriptionProduct($productId) && $quantity > 1) {
                 $cart['items'][$productId] = 1;
                 $this->flashSubscriptionNotice();
+            } elseif (! $this->allowsMultipleQuantity($productId) && $quantity > 1) {
+                $cart['items'][$productId] = 1;
             } else {
                 $cart['items'][$productId] = $quantity;
             }
@@ -170,6 +179,21 @@ class CartManager
         }
 
         return $subscriptions;
+    }
+
+    private function allowsMultipleQuantity(string $productId): bool
+    {
+        $entry = EntryFacade::find($productId);
+
+        if (! $entry) {
+            return true;
+        }
+
+        $shipping = method_exists($entry, 'shipping')
+            ? $entry->shipping()
+            : (bool) $entry->get(ProductEntry::SHIPPING);
+
+        return (bool) $shipping;
     }
 
     private function flashSubscriptionNotice(): void

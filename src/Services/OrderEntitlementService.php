@@ -48,7 +48,8 @@ class OrderEntitlementService
                 $item['target_id'],
                 $item['start'],
                 $item['end'],
-                false,
+                (bool) ($item['keep_accessible_after_expiry'] ?? false),
+                (bool) ($item['keep_unlocked_when_active'] ?? false),
                 true
             );
 
@@ -84,13 +85,118 @@ class OrderEntitlementService
         });
     }
 
+    public function applySubscriptionEnd(OrderEntry $order, string $productId, ?Carbon $endsAt): void
+    {
+        if (! $this->canUseAccess()) {
+            return;
+        }
+
+        if (! $endsAt) {
+            return;
+        }
+
+        $orderId = (string) $order->id();
+        if ($orderId === '') {
+            return;
+        }
+
+        $product = Entry::find($productId);
+        if (! $product || $product->collectionHandle() !== ProductEntry::COLLECTION) {
+            return;
+        }
+
+        $accessItems = $product->get(ProductEntry::ALL_ACCESS_ITEMS);
+        if (! is_array($accessItems)) {
+            return;
+        }
+
+        $orderStart = $this->orderStart($order);
+
+        foreach ($accessItems as $accessItem) {
+            if (! is_array($accessItem)) {
+                continue;
+            }
+
+            if (array_key_exists('enabled', $accessItem) && ! $accessItem['enabled']) {
+                continue;
+            }
+
+            $collectionHandle = (string) ($accessItem['type'] ?? '');
+            if ($collectionHandle === '') {
+                continue;
+            }
+
+            $targetId = $this->firstId($accessItem[$collectionHandle] ?? null);
+            if (! $targetId) {
+                continue;
+            }
+
+            $entitlements = Entry::query()
+                ->where('collection', EntitlementEntry::COLLECTION)
+                ->where(self::ORDER_REFERENCE, $orderId)
+                ->where(EntitlementEntry::TARGET, $targetId)
+                ->get();
+
+            if ($entitlements->isEmpty()) {
+                continue;
+            }
+
+            $startFallback = $this->permanentStart($accessItem, $orderStart);
+
+            $entitlements->each(function ($entitlement) use ($startFallback, $endsAt) {
+                $currentStart = $this->parseDateValue(
+                    $entitlement->get(EntitlementEntry::VALIDITY_START)
+                );
+                $currentEnd = $this->parseDateValue(
+                    $entitlement->get(EntitlementEntry::VALIDITY_END)
+                );
+                $keepAccessible = (bool) $entitlement->get(EntitlementEntry::KEEP_ACCESSIBLE_AFTER_EXPIRY);
+                $keepUnlocked = (bool) $entitlement->get(EntitlementEntry::KEEP_UNLOCKED_WHEN_ACTIVE);
+
+                $startValue = $currentStart ?: $startFallback;
+                $needsStart = $startValue && (! $currentStart || ! $currentStart->equalTo($startValue));
+                $needsEnd = $keepAccessible || $keepUnlocked || ! $currentEnd || $currentEnd->gt($endsAt);
+
+                if (! $needsStart && ! $needsEnd) {
+                    return;
+                }
+
+                $endValue = $needsEnd ? $endsAt : $currentEnd;
+
+                if ($needsStart) {
+                    $entitlement->set(EntitlementEntry::VALIDITY_START, $startValue?->toDateTimeString());
+                }
+
+                if ($needsEnd) {
+                    $entitlement->set(EntitlementEntry::VALIDITY_END, $endValue?->toDateTimeString());
+                }
+
+                if ($keepAccessible) {
+                    $entitlement->set(EntitlementEntry::KEEP_ACCESSIBLE_AFTER_EXPIRY, false);
+                }
+
+                if ($keepUnlocked) {
+                    $entitlement->set(EntitlementEntry::KEEP_UNLOCKED_WHEN_ACTIVE, false);
+                }
+
+                $entitlement->saveQuietly();
+            });
+        }
+    }
+
     private function canUseAccess(): bool
     {
         if (! class_exists(AccessService::class) || ! class_exists(EntitlementEntry::class)) {
             return false;
         }
 
-        return CollectionFacade::find(EntitlementEntry::COLLECTION) !== null;
+        if (CollectionFacade::find(EntitlementEntry::COLLECTION) === null) {
+            return false;
+        }
+
+        return \Statamic\Facades\Blueprint::find(
+            sprintf('collections/%s/entitlement', EntitlementEntry::COLLECTION)
+        ) !== null;
     }
 
     private function accessItemsForOrder(OrderEntry $order): array
@@ -101,6 +207,7 @@ class OrderEntitlementService
             return [];
         }
 
+        $orderStart = $this->orderStart($order);
         $targets = [];
 
         foreach ($items as $item) {
@@ -146,8 +253,10 @@ class OrderEntitlementService
                     continue;
                 }
 
-                [$start, $end] = $this->resolveValidity($accessItem);
-                $key = $this->dedupeKey($targetId, $start, $end);
+                [$start, $end] = $this->resolveValidity($accessItem, $orderStart);
+                $keepAccessible = (bool) ($accessItem['access_keep_accessible_after_expiry'] ?? false);
+                $keepUnlocked = (bool) ($accessItem['access_keep_unlocked_when_active'] ?? false);
+                $key = $this->dedupeKey($targetId, $start, $end, $keepAccessible, $keepUnlocked);
 
                 if (isset($targets[$key])) {
                     continue;
@@ -157,6 +266,8 @@ class OrderEntitlementService
                     'target_id' => $targetId,
                     'start' => $start,
                     'end' => $end,
+                    'keep_accessible_after_expiry' => $keepAccessible,
+                    'keep_unlocked_when_active' => $keepUnlocked,
                 ];
             }
         }
@@ -164,15 +275,15 @@ class OrderEntitlementService
         return array_values($targets);
     }
 
-    private function resolveValidity(array $accessItem): array
+    private function resolveValidity(array $accessItem, ?Carbon $orderStart): array
     {
         $typeValue = (string) ($accessItem['access_type'] ?? AccessType::PERMANENT->value);
         $type = AccessType::tryFrom($typeValue) ?? AccessType::PERMANENT;
 
         return match ($type) {
             AccessType::DATE_RANGE => $this->rangeFromValue($accessItem['date_range'] ?? null),
-            AccessType::DURATION => $this->durationFromValue($accessItem),
-            AccessType::PERMANENT => [null, null],
+            AccessType::DURATION => $this->durationFromValue($accessItem, $orderStart),
+            AccessType::PERMANENT => [$this->permanentStart($accessItem, $orderStart), null],
         };
     }
 
@@ -184,9 +295,9 @@ class OrderEntitlementService
         return [$start, $end];
     }
 
-    private function durationFromValue(array $accessItem): array
+    private function durationFromValue(array $accessItem, ?Carbon $orderStart): array
     {
-        $start = now();
+        $start = $orderStart ? $orderStart->copy() : now();
         $iterations = (int) ($accessItem['access_duration_iterations'] ?? 1);
         if ($iterations < 1) {
             $iterations = 1;
@@ -196,6 +307,17 @@ class OrderEntitlementService
         $end = $this->addDuration($start->copy(), $iterations, $unit);
 
         return [$start, $end];
+    }
+
+    private function permanentStart(array $accessItem, ?Carbon $orderStart): ?Carbon
+    {
+        if (! $orderStart) {
+            return null;
+        }
+
+        $flag = $accessItem['access_permanent_from_payment_date'] ?? false;
+
+        return $flag ? $orderStart->copy() : null;
     }
 
     private function addDuration(Carbon $start, int $iterations, string $unit): Carbon
@@ -233,6 +355,20 @@ class OrderEntitlementService
         return null;
     }
 
+    private function orderStart(OrderEntry $order): ?Carbon
+    {
+        $value = $order->succeededAt();
+        if (! $value) {
+            return null;
+        }
+
+        try {
+            return Carbon::parse($value);
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
     private function firstId(mixed $value): ?string
     {
         if (is_array($value)) {
@@ -246,12 +382,20 @@ class OrderEntitlementService
         return null;
     }
 
-    private function dedupeKey(string $targetId, ?Carbon $start, ?Carbon $end): string
+    private function dedupeKey(
+        string $targetId,
+        ?Carbon $start,
+        ?Carbon $end,
+        bool $keepAccessible,
+        bool $keepUnlocked
+    ): string
     {
         return implode('|', [
             $targetId,
             $start?->toDateTimeString() ?? '',
             $end?->toDateTimeString() ?? '',
+            $keepAccessible ? '1' : '0',
+            $keepUnlocked ? '1' : '0',
         ]);
     }
 }

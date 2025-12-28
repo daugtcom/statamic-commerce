@@ -343,6 +343,36 @@ class ProductBlueprint
                             ],
                         ],
                     ],
+                    [
+                        'handle' => 'access_permanent_from_payment_date',
+                        'field' => [
+                            'type' => 'toggle',
+                            'default' => false,
+                            'display' => 'daugt-commerce::products.fields.access_permanent_from_payment_date',
+                            'instructions' => 'daugt-commerce::products.fields.access_permanent_from_payment_date_instructions',
+                            'if' => [
+                                'access_type' => 'equals permanent',
+                            ],
+                        ],
+                    ],
+                    [
+                        'handle' => 'access_keep_accessible_after_expiry',
+                        'field' => [
+                            'type' => 'toggle',
+                            'default' => false,
+                            'display' => 'daugt-commerce::products.fields.access_keep_accessible_after_expiry',
+                            'instructions' => 'daugt-commerce::products.fields.access_keep_accessible_after_expiry_instructions',
+                        ],
+                    ],
+                    [
+                        'handle' => 'access_keep_unlocked_when_active',
+                        'field' => [
+                            'type' => 'toggle',
+                            'default' => false,
+                            'display' => 'daugt-commerce::products.fields.access_keep_unlocked_when_active',
+                            'instructions' => 'daugt-commerce::products.fields.access_keep_unlocked_when_active_instructions',
+                        ],
+                    ],
                 ],
             ];
         }

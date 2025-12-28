@@ -54,7 +54,7 @@ class CartManagerTest extends TestCase
     public function test_add_subscription_forces_quantity_one_and_keeps_one_time(): void
     {
         $subscription = $this->makeProduct('sub-1', 'recurring');
-        $oneTime = $this->makeProduct('one-1', 'one_time');
+        $oneTime = $this->makeProduct('one-1', 'one_time', true);
 
         $manager = $this->manager();
         $manager->add($oneTime->id(), 2);
@@ -65,6 +65,39 @@ class CartManagerTest extends TestCase
         $this->assertCount(2, $cart['items']);
         $this->assertSame(1, $cart['items'][$subscription->id()]);
         $this->assertSame(2, $cart['items'][$oneTime->id()]);
+    }
+
+    public function test_non_shipping_product_forces_quantity_one(): void
+    {
+        $product = $this->makeProduct('single-1', 'one_time', false);
+        $manager = $this->manager();
+
+        $manager->add($product->id(), 3);
+        $cart = $manager->get();
+        $this->assertSame(1, $cart['items'][$product->id()]);
+
+        $manager->add($product->id(), 2);
+        $cart = $manager->get();
+        $this->assertSame(1, $cart['items'][$product->id()]);
+
+        $manager->setQuantity($product->id(), 5);
+        $cart = $manager->get();
+        $this->assertSame(1, $cart['items'][$product->id()]);
+    }
+
+    public function test_shipping_product_allows_multiple_quantity(): void
+    {
+        $product = $this->makeProduct('ship-1', 'one_time', true);
+        $manager = $this->manager();
+
+        $manager->add($product->id(), 2);
+        $manager->add($product->id(), 1);
+        $cart = $manager->get();
+        $this->assertSame(3, $cart['items'][$product->id()]);
+
+        $manager->setQuantity($product->id(), 4);
+        $cart = $manager->get();
+        $this->assertSame(4, $cart['items'][$product->id()]);
     }
 
     public function test_add_subscription_replaces_existing_subscription_only(): void
@@ -88,7 +121,7 @@ class CartManagerTest extends TestCase
     public function test_add_one_time_keeps_subscription(): void
     {
         $subscription = $this->makeProduct('sub-4', 'recurring');
-        $oneTime = $this->makeProduct('one-3', 'one_time');
+        $oneTime = $this->makeProduct('one-3', 'one_time', true);
 
         $manager = $this->manager();
         $manager->add($subscription->id(), 1);
@@ -106,7 +139,7 @@ class CartManagerTest extends TestCase
         return new CartManager(new SessionCartStore($this->app['session.store']));
     }
 
-    private function makeProduct(string $id, string $billingType): ProductEntry
+    private function makeProduct(string $id, string $billingType, bool $shipping = false): ProductEntry
     {
         $entry = EntryFacade::make()
             ->collection(ProductEntry::COLLECTION)
@@ -118,6 +151,7 @@ class CartManagerTest extends TestCase
             ProductEntry::TITLE => 'Test Product',
             ProductEntry::BILLING_TYPE => $billingType,
             ProductEntry::PRICE => 10,
+            ProductEntry::SHIPPING => $shipping,
         ]);
 
         $entry->saveQuietly();

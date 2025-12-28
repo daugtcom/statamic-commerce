@@ -15,7 +15,6 @@ use Daugt\Commerce\Enums\BillingType;
 use Daugt\Commerce\Enums\OrderStatus;
 use Daugt\Commerce\Enums\ShippingStatus;
 use Daugt\Commerce\Jobs\StripeWebhooks\CheckoutSessionCompleted;
-use Spatie\WebhookClient\Models\WebhookCall;
 use Statamic\Facades\Blueprint;
 use Statamic\Facades\Collection as CollectionFacade;
 use Statamic\Facades\Entry;
@@ -128,10 +127,10 @@ class StripeWebhookCheckoutSessionTest extends TestCase
 
         $stripeClient = new FakeStripeClient([
             'checkout' => new FakeCheckoutService($lineItems),
-            'invoices' => new FakeInvoicesService(),
+            'invoices' => new FakeInvoicesService('INV-123'),
         ]);
 
-        $job = new CheckoutSessionCompleted(new WebhookCall(['payload' => $payload]));
+        $job = new CheckoutSessionCompleted($payload);
         $job->handle($stripeClient);
 
         $order = Entry::query()
@@ -168,6 +167,7 @@ class StripeWebhookCheckoutSessionTest extends TestCase
         $this->assertSame($order->id(), $this->firstId($invoice->get(InvoiceEntry::ORDER)));
         $this->assertSame($user->id(), $this->firstId($invoice->get(InvoiceEntry::USER)));
         $this->assertSame(OrderStatus::PAID->value, $invoice->get(InvoiceEntry::STATUS));
+        $this->assertSame('INV-123', $invoice->get(InvoiceEntry::NUMBER));
         $this->assertSame('pi_123', $invoice->get(InvoiceEntry::STRIPE_PAYMENT_INTENT_ID));
 
         $refreshedUser = User::find($user->id());
@@ -258,6 +258,10 @@ class FakeCheckoutSessionsService
 
 class FakeInvoicesService
 {
+    public function __construct(private string $number = '')
+    {
+    }
+
     public array $updated = [];
 
     public function update(string $invoiceId, array $params = []): array
@@ -265,5 +269,13 @@ class FakeInvoicesService
         $this->updated[] = ['id' => $invoiceId, 'params' => $params];
 
         return ['id' => $invoiceId];
+    }
+
+    public function retrieve(string $invoiceId): array
+    {
+        return [
+            'id' => $invoiceId,
+            'number' => $this->number,
+        ];
     }
 }
