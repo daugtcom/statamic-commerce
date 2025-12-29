@@ -43,7 +43,27 @@ class OrderEntry extends Entry
     {
         $value = $this->get(self::SUCCEEDED_AT);
 
-        return $value !== null ? Carbon::createFromTimestamp($value) : null;
+        if ($value === null || $value === '') {
+            return null;
+        }
+
+        if ($value instanceof \DateTimeInterface) {
+            return Carbon::instance($value);
+        }
+
+        if (is_numeric($value)) {
+            return Carbon::createFromTimestamp((int) $value);
+        }
+
+        if (is_string($value)) {
+            try {
+                return Carbon::parse($value);
+            } catch (\Throwable) {
+                return null;
+            }
+        }
+
+        return null;
     }
 
     public function stripeCheckoutSessionId(): ?string
