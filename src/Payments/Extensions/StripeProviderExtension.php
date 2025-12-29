@@ -132,6 +132,11 @@ class StripeProviderExtension extends AbstractPaymentProviderExtension
                 'display' => 'daugt-commerce::invoices.fields.stripe_invoice_id',
                 'read_only' => true,
             ],
+            InvoiceEntry::URL => [
+                'type' => 'text',
+                'display' => 'daugt-commerce::invoices.fields.url',
+                'visibility' => 'computed',
+            ],
         ];
     }
 

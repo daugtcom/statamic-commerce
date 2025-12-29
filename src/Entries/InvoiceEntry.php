@@ -11,6 +11,7 @@ class InvoiceEntry extends Entry
     public const ORDER = 'order';
     public const STATUS = 'status';
     public const NUMBER = 'invoice_number';
+    public const URL = 'invoice_url';
     public const STRIPE_PAYMENT_INTENT_ID = 'stripe_payment_intent_id';
     public const STRIPE_INVOICE_ID = 'stripe_invoice_id';
 
@@ -47,5 +48,10 @@ class InvoiceEntry extends Entry
         $value = $this->get(self::NUMBER);
 
         return $value !== null ? (string) $value : null;
+    }
+
+    public function invoiceUrl(): ?string
+    {
+        return $this->value(self::URL);
     }
 }

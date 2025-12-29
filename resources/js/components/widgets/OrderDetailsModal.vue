@@ -20,6 +20,7 @@
     const invoiceColumns = [
         { field: 'number', label: __('daugt-commerce::orders.widget.modal.invoice_number'), sortable: false },
         { field: 'status', label: __('daugt-commerce::orders.widget.columns.status'), sortable: false },
+        { field: 'actions', label: '', sortable: false },
     ];
 
     const modalTitle = computed(() => {
@@ -101,6 +102,16 @@
                 >
                     <template #cell-status="{ row }">
                         <StatusBadge :status="row.status" context="invoice" />
+                    </template>
+                    <template #cell-actions="{ row }">
+                        <Button
+                            v-if="row.invoice_url"
+                            variant="ghost"
+                            size="sm"
+                            :text="__('daugt-commerce::orders.widget.actions.view_invoice')"
+                            :href="row.invoice_url"
+                            target="_blank"
+                        />
                     </template>
                 </Listing>
             </div>

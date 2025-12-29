@@ -4,6 +4,7 @@ namespace Daugt\Commerce;
 
 use Daugt\Commerce\Carts\Contracts\CartStore;
 use Daugt\Commerce\Carts\Stores\SessionCartStore;
+use Daugt\Commerce\Computed\ComputedFields;
 use Daugt\Commerce\Payments\PaymentProviderResolver;
 use Statamic\Providers\AddonServiceProvider;
 use Stripe\StripeClient;
@@ -52,6 +53,7 @@ class ServiceProvider extends AddonServiceProvider
     {
         parent::bootAddon();
         $this->loadJsonTranslationsFrom(__DIR__ . '/../lang');
+        ComputedFields::register();
         $this->publishes([
             __DIR__ . '/../config/statamic/daugt-commerce.php' => config_path('statamic/daugt-commerce.php'),
         ], 'daugt-commerce-config');

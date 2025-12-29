@@ -111,6 +111,7 @@ class OrdersList extends Widget
                     'id' => (string) $invoice->id(),
                     'number' => $invoice->invoiceNumber() ?? $invoice->stripeInvoiceId() ?? (string) $invoice->id(),
                     'status' => $status,
+                    'invoice_url' => $invoice->invoiceUrl(),
                 ];
             })
             ->values()
