@@ -11,6 +11,7 @@ class OrderEntry extends Entry
     public const USER = 'user';
     public const ORDER_NUMBER = 'order_number';
     public const STATUS = 'status';
+    public const SHIPPING_STATUS = 'shipping_status';
     public const SUCCEEDED_AT = 'succeeded_at';
     public const ITEMS = 'items';
     public const INVOICES = 'invoices';

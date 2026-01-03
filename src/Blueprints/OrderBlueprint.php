@@ -5,7 +5,6 @@ namespace Daugt\Commerce\Blueprints;
 use Daugt\Commerce\Entries\ProductEntry;
 use Daugt\Commerce\Entries\InvoiceEntry;
 use Daugt\Commerce\Enums\OrderStatus;
-use Daugt\Commerce\Enums\ShippingStatus;
 use Statamic\Facades\Blueprint as BlueprintFacade;
 use Statamic\Fields\Blueprint as StatamicBlueprint;
 
@@ -41,6 +40,17 @@ class OrderBlueprint
                                         'display' => 'daugt-commerce::orders.fields.status',
                                         'width' => 33,
                                         'max_items' => 1,
+                                    ],
+                                ],
+                                [
+                                    'handle' => 'shipping_status',
+                                    'field' => [
+                                        'dictionary' => 'shipping_statuses',
+                                        'type' => 'dictionary',
+                                        'display' => 'daugt-commerce::orders.fields.shipping_status',
+                                        'width' => 33,
+                                        'max_items' => 1,
+                                        'visibility' => 'computed',
                                     ],
                                 ],
                                 [
@@ -118,12 +128,13 @@ class OrderBlueprint
                                                         'handle' => 'shipping_status',
                                                         'field' => [
                                                             'dictionary' => 'shipping_statuses',
-                                                            'default' => ShippingStatus::PENDING->value,
                                                             'type' => 'dictionary',
                                                             'display' => 'daugt-commerce::orders.fields.item_shipping_status',
                                                             'width' => 33,
                                                             'max_items' => 1,
-                                                            'read_only' => true,
+                                                            'if' => [
+                                                                'shipping_status' => 'not empty',
+                                                            ],
                                                         ],
                                                     ],
                                                 ],

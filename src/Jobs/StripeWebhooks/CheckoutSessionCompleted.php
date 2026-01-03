@@ -19,6 +19,11 @@ class CheckoutSessionCompleted extends StripeWebhookJob
     public function handle(StripeClient $stripeClient): void
     {
         $payload = StripePayload::array($this->payload());
+        $type = StripePayload::string($payload, 'type');
+        if ($type === 'checkout.session.expired') {
+            return;
+        }
+
         $session = StripePayload::array($payload, 'data.object');
         $sessionId = StripePayload::string($session, 'id');
         $customerId = StripePayload::string($session, 'customer');
@@ -75,7 +80,7 @@ class CheckoutSessionCompleted extends StripeWebhookJob
         }
 
         $type = StripePayload::string($payload, 'type');
-        if ($type === 'checkout.session.async_payment_failed' || $type === 'checkout.session.expired') {
+        if ($type === 'checkout.session.async_payment_failed') {
             return OrderStatus::FAILED->value;
         }
 
@@ -117,7 +122,10 @@ class CheckoutSessionCompleted extends StripeWebhookJob
 
             $productId = (string) $product->id();
             $existing = $existingItems[$productId] ?? [];
-            $shippingStatus = $existing['shipping_status'] ?? ShippingStatus::PENDING->value;
+            $requiresShipping = $product->shipping();
+            $shippingStatus = $requiresShipping
+                ? ($existing['shipping_status'] ?? ShippingStatus::PENDING->value)
+                : null;
 
             $isRecurring = StripePayload::array($lineItem, 'price.recurring') !== [];
 

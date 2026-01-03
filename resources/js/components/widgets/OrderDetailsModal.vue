@@ -11,11 +11,22 @@
 
     const emit = defineEmits(['update:open']);
 
-    const itemColumns = [
-        { field: 'product', label: __('daugt-commerce::orders.widget.modal.product'), sortable: false },
-        { field: 'quantity', label: __('daugt-commerce::orders.widget.modal.quantity'), sortable: false },
-        { field: 'shipping_status', label: __('daugt-commerce::orders.widget.modal.shipping_status'), sortable: false },
-    ];
+    const items = computed(() => props.order?.items ?? []);
+    const invoices = computed(() => props.order?.invoices ?? []);
+    const hasOrderShippingStatus = computed(() => !!props.order?.shipping_status);
+    const hasItemShippingStatus = computed(() => items.value.some((item) => !!item.shipping_status));
+    const itemColumns = computed(() => {
+        const base = [
+            { field: 'product', label: __('daugt-commerce::orders.widget.modal.product'), sortable: false },
+            { field: 'quantity', label: __('daugt-commerce::orders.widget.modal.quantity'), sortable: false },
+        ];
+
+        if (hasItemShippingStatus.value) {
+            base.push({ field: 'shipping_status', label: __('daugt-commerce::orders.widget.modal.shipping_status'), sortable: false });
+        }
+
+        return base;
+    });
 
     const invoiceColumns = [
         { field: 'number', label: __('daugt-commerce::orders.widget.modal.invoice_number'), sortable: false },
@@ -32,18 +43,22 @@
         return `${__('daugt-commerce::orders.widget.modal.title')} #${number}`;
     });
 
-    const items = computed(() => props.order?.items ?? []);
-    const invoices = computed(() => props.order?.invoices ?? []);
 </script>
 
 <template>
     <Modal :open="open" :title="modalTitle" @update:open="emit('update:open', $event)">
         <div class="space-y-4">
-            <div class="grid grid-cols-2 gap-4 text-sm">
+            <div class="grid grid-cols-1 gap-4 text-sm md:grid-cols-3">
                 <div>
                     <Label :text="__('daugt-commerce::orders.widget.columns.status')" />
                     <div>
                         <StatusBadge :status="order?.status" context="order" />
+                    </div>
+                </div>
+                <div v-if="hasOrderShippingStatus">
+                    <Label :text="__('daugt-commerce::orders.widget.columns.shipping_status')" />
+                    <div>
+                        <ShippingStatusBadge :status="order?.shipping_status" />
                     </div>
                 </div>
                 <div>
@@ -80,7 +95,7 @@
                         </div>
                     </template>
                     <template #cell-shipping_status="{ row }">
-                        <ShippingStatusBadge :status="row.shipping_status" />
+                        <ShippingStatusBadge v-if="row.shipping_status" :status="row.shipping_status" />
                     </template>
                 </Listing>
             </div>

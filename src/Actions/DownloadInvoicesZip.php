@@ -18,7 +18,7 @@ class DownloadInvoicesZip extends Action
 
     public static function title()
     {
-        return __('Download invoices');
+        return __('PDF Download');
     }
 
     public function visibleTo($item)

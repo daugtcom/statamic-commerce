@@ -53,8 +53,8 @@ class StripeWebhookCheckoutSessionTest extends TestCase
         $user->set('stripe_id', 'cus_123');
         $user->saveQuietly();
 
-        $oneTime = $this->makeProduct('One-Time', BillingType::ONE_TIME->value, 'price_one', 'prod_one');
-        $recurring = $this->makeProduct('Recurring', BillingType::RECURRING->value, 'price_sub', 'prod_sub');
+        $oneTime = $this->makeProduct('One-Time', BillingType::ONE_TIME->value, 'price_one', 'prod_one', true);
+        $recurring = $this->makeProduct('Recurring', BillingType::RECURRING->value, 'price_sub', 'prod_sub', true);
 
         $existing = Entry::make()->collection(OrderEntry::COLLECTION);
         $orderBlueprint = Blueprint::in('collections/orders')->first();
@@ -175,13 +175,49 @@ class StripeWebhookCheckoutSessionTest extends TestCase
         $this->assertSame('2 Side St', $refreshedUser->get('shipping_address')['line1'] ?? null);
     }
 
-    private function makeProduct(string $title, string $billingType, string $priceId, string $productId): ProductEntry
+    public function test_expired_checkout_session_is_ignored(): void
+    {
+        $user = User::make()->email('stripe-expired@example.test');
+        $user->set('stripe_id', 'cus_456');
+        $user->saveQuietly();
+
+        $payload = [
+            'type' => 'checkout.session.expired',
+            'data' => [
+                'object' => [
+                    'id' => 'cs_expired_123',
+                    'customer' => 'cus_456',
+                ],
+            ],
+        ];
+
+        $stripeClient = new FakeStripeClient([]);
+
+        $job = new CheckoutSessionCompleted($payload);
+        $job->handle($stripeClient);
+
+        $order = Entry::query()
+            ->where('collection', OrderEntry::COLLECTION)
+            ->where(OrderEntry::STRIPE_CHECKOUT_SESSION_ID, 'cs_expired_123')
+            ->first();
+
+        $this->assertNull($order);
+    }
+
+    private function makeProduct(
+        string $title,
+        string $billingType,
+        string $priceId,
+        string $productId,
+        bool $shipping
+    ): ProductEntry
     {
         $entry = Entry::make()->collection(ProductEntry::COLLECTION);
         $entry->set(ProductEntry::TITLE, $title);
         $entry->set(ProductEntry::BILLING_TYPE, $billingType);
         $entry->set(ProductEntry::STRIPE_PRICE_ID, $priceId);
         $entry->set(ProductEntry::STRIPE_PRODUCT_ID, $productId);
+        $entry->set(ProductEntry::SHIPPING, $shipping);
         $entry->set(ProductEntry::EXTERNAL_PRODUCT, false);
         $entry->saveQuietly();
 

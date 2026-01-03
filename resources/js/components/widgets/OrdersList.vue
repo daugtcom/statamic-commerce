@@ -3,18 +3,31 @@
     import { computed, ref, watch } from 'vue';
     import OrderDetailsModal from './OrderDetailsModal.vue';
     import StatusBadge from "../components/StatusBadge.vue";
+    import ShippingStatusBadge from "../components/ShippingStatusBadge.vue";
 
     const props = defineProps({
         title: { type: String, default: 'Orders' },
         orders: { type: Array, default: () => [] },
     });
 
-    const columns = [
-        { field: 'order_number', label: __('daugt-commerce::orders.widget.columns.order_number'), sortable: false },
-        { field: 'status', label: __('daugt-commerce::orders.widget.columns.status'), sortable: false },
-        { field: 'succeeded_at', label: __('daugt-commerce::orders.widget.columns.succeeded_at'), sortable: false },
-        { field: 'actions', label: '', sortable: false },
-    ];
+    const hasShippingStatus = computed(() => props.orders.some((order) => !!order.shipping_status));
+    const columns = computed(() => {
+        const base = [
+            { field: 'order_number', label: __('daugt-commerce::orders.widget.columns.order_number'), sortable: false },
+            { field: 'status', label: __('daugt-commerce::orders.widget.columns.status'), sortable: false },
+        ];
+
+        if (hasShippingStatus.value) {
+            base.push({ field: 'shipping_status', label: __('daugt-commerce::orders.widget.columns.shipping_status'), sortable: false });
+        }
+
+        base.push(
+            { field: 'succeeded_at', label: __('daugt-commerce::orders.widget.columns.succeeded_at'), sortable: false },
+            { field: 'actions', label: '', sortable: false }
+        );
+
+        return base;
+    });
 
     const modalOpen = ref(false);
     const selectedOrder = ref(null);
@@ -59,6 +72,10 @@
               <template #cell-status="{ row }">
                 <StatusBadge :status="row.status" context="order" />
               </template>
+
+                <template #cell-shipping_status="{ row }">
+                    <ShippingStatusBadge v-if="row.shipping_status" :status="row.shipping_status" />
+                </template>
 
                 <template #cell-succeeded_at="{ row }">
                     <span>{{ row.succeeded_at }}</span>

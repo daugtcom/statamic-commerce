@@ -56,11 +56,13 @@ class OrdersList extends Widget
     private function orderPayload(OrderEntry $order): array
     {
         $status = $order->status() ?? '';
+        $shippingStatus = $order->augmentedValue(OrderEntry::SHIPPING_STATUS)->value();
 
         return [
             'id' => (string) $order->id(),
             'order_number' => $order->orderNumber(),
             'status' => $status,
+            'shipping_status' => $shippingStatus,
             'succeeded_at' => $order->succeededAt(),
             'items' => $this->itemsPayload($order),
             'invoices' => $this->invoicesPayload($order),
@@ -82,12 +84,16 @@ class OrdersList extends Widget
                 $product = $productId ? Entry::find($productId) : null;
 
                 $productImage = $product instanceof ProductEntry ? $this->productImageUrl($product) : null;
+                $shippingStatus = null;
+                if ($product instanceof ProductEntry && $product->shipping()) {
+                    $shippingStatus = $item['shipping_status'] ?? null;
+                }
 
                 return [
                     'product' => $product->get('title'),
                     'media' => $productImage,
                     'quantity' => (int) ($item['quantity'] ?? 1),
-                    'shipping_status' => $item['shipping_status'] ?? null,
+                    'shipping_status' => $shippingStatus,
                 ];
             })
             ->values()
