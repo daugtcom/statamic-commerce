@@ -21,6 +21,7 @@ class ProductEntry extends Entry
     public const EXTERNAL_PRODUCT_URL = 'external_product_url';
     public const ALL_ACCESS_ITEMS = 'all_access_items';
     public const SHIPPING = 'shipping';
+    public const SHIPPING_SIZE = 'shipping_size';
     public const STRIPE_TAX_CODE = 'stripe_tax_code';
     public const STRIPE_PRODUCT_ID = 'stripe_product_id';
     public const STRIPE_PRICE_ID = 'stripe_price_id';
@@ -70,6 +71,17 @@ class ProductEntry extends Entry
     public function shipping(): bool
     {
         return (bool) $this->get(self::SHIPPING);
+    }
+
+    public function shippingSizeId(): ?string
+    {
+        $value = $this->get(self::SHIPPING_SIZE);
+
+        if (is_array($value)) {
+            $value = $value[0] ?? null;
+        }
+
+        return $value !== null ? (string) $value : null;
     }
 
     public function externalProduct(): bool

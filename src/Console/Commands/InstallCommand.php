@@ -10,8 +10,11 @@ use Daugt\Commerce\Blueprints\InvoiceBlueprint;
 use Daugt\Commerce\Blueprints\InvoiceCollection;
 use Daugt\Commerce\Blueprints\CategoryBlueprint;
 use Daugt\Commerce\Blueprints\CategoryTaxonomy;
+use Daugt\Commerce\Blueprints\ShippingSizeBlueprint;
+use Daugt\Commerce\Blueprints\ShippingSizeTaxonomy;
 use Daugt\Commerce\Console\AsciiArt;
 use Daugt\Commerce\Payments\PaymentProviderResolver;
+use Daugt\Commerce\Support\AddonEdition;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Str;
@@ -36,7 +39,9 @@ class InstallCommand extends Command {
         InvoiceCollection $invoiceCollection,
         InvoiceBlueprint $invoiceBlueprint,
         CategoryTaxonomy $categoryTaxonomy,
-        CategoryBlueprint $categoryBlueprint
+        CategoryBlueprint $categoryBlueprint,
+        ShippingSizeTaxonomy $shippingSizeTaxonomy,
+        ShippingSizeBlueprint $shippingSizeBlueprint
     ): void
     {
         $this->output->write((new AsciiArt())());
@@ -53,7 +58,9 @@ class InstallCommand extends Command {
             $invoiceCollection,
             $invoiceBlueprint,
             $categoryTaxonomy,
-            $categoryBlueprint
+            $categoryBlueprint,
+            $shippingSizeTaxonomy,
+            $shippingSizeBlueprint
         );
 
         if ($this->isStripeProvider()) {
@@ -69,7 +76,9 @@ class InstallCommand extends Command {
         InvoiceCollection $invoiceCollection,
         InvoiceBlueprint $invoiceBlueprint,
         CategoryTaxonomy $categoryTaxonomy,
-        CategoryBlueprint $categoryBlueprint
+        CategoryBlueprint $categoryBlueprint,
+        ShippingSizeTaxonomy $shippingSizeTaxonomy,
+        ShippingSizeBlueprint $shippingSizeBlueprint
     ): self {
         $includeAccess = $this->accessIsReady();
         $accessCollections = $includeAccess ? $this->accessTargetCollections() : [];
@@ -99,6 +108,19 @@ class InstallCommand extends Command {
             Str::singular($taxonomy->handle())
         ));
         Blueprint::save($taxonomyBlueprint);
+
+        if (AddonEdition::isPro()) {
+            $shippingSizes = $shippingSizeTaxonomy();
+            $shippingSizes->save();
+
+            $shippingSizesBlueprint = $shippingSizeBlueprint();
+            $shippingSizesBlueprint->setHandle(sprintf(
+                'taxonomies/%s/%s',
+                $shippingSizes->handle(),
+                Str::singular($shippingSizes->handle())
+            ));
+            Blueprint::save($shippingSizesBlueprint);
+        }
 
         $orders = $orderCollection();
         $orders->save();

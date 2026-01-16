@@ -28,7 +28,11 @@
     "extra": {
         "statamic": {
             "name": "Commerce",
-            "description": "Commerce addon"
+            "description": "Commerce addon",
+            "editions": [
+                "standard",
+                "pro"
+            ]
         },
         "laravel": {
             "providers": [

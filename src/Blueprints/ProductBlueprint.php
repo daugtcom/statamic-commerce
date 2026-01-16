@@ -3,6 +3,7 @@
 namespace Daugt\Commerce\Blueprints;
 
 use Daugt\Commerce\Enums\AccessType;
+use Daugt\Commerce\Support\AddonEdition;
 use Statamic\Facades\Collection as CollectionFacade;
 use Statamic\Facades\Blueprint as BlueprintFacade;
 use Statamic\Fields\Blueprint as StatamicBlueprint;
@@ -184,6 +185,22 @@ class ProductBlueprint
                                         'instructions' => 'daugt-commerce::products.fields.shipping_instructions',
                                     ],
                                 ],
+                                ...(AddonEdition::isPro() ? [
+                                    [
+                                        'handle' => 'shipping_size',
+                                        'field' => [
+                                            'taxonomies' => ['shipping_sizes'],
+                                            'mode' => 'select',
+                                            'max_items' => 1,
+                                            'type' => 'terms',
+                                            'display' => 'daugt-commerce::products.fields.shipping_size',
+                                            'instructions' => 'daugt-commerce::products.fields.shipping_size_instructions',
+                                            'if' => [
+                                                'shipping' => 'equals true',
+                                            ],
+                                        ],
+                                    ],
+                                ] : []),
                             ],
                         ],
                     ],

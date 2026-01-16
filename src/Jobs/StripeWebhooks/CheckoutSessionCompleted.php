@@ -4,10 +4,9 @@ namespace Daugt\Commerce\Jobs\StripeWebhooks;
 
 use Daugt\Commerce\Entries\InvoiceEntry;
 use Daugt\Commerce\Entries\OrderEntry;
-use Daugt\Commerce\Entries\ProductEntry;
-use Daugt\Commerce\Enums\BillingType;
 use Daugt\Commerce\Enums\OrderStatus;
 use Daugt\Commerce\Enums\ShippingStatus;
+use Daugt\Commerce\Services\StripeLineItemProductResolver;
 use Daugt\Commerce\Support\StripeAddress;
 use Daugt\Commerce\Support\StripePayload;
 use Statamic\Facades\Entry;
@@ -16,7 +15,7 @@ use Stripe\StripeClient;
 
 class CheckoutSessionCompleted extends StripeWebhookJob
 {
-    public function handle(StripeClient $stripeClient): void
+    public function handle(StripeClient $stripeClient, StripeLineItemProductResolver $productResolver): void
     {
         $payload = StripePayload::array($this->payload());
         $type = StripePayload::string($payload, 'type');
@@ -43,7 +42,7 @@ class CheckoutSessionCompleted extends StripeWebhookJob
 
         $existingItems = $this->indexExistingItems($order->get(OrderEntry::ITEMS));
         $lineItems = $this->fetchLineItems($stripeClient, $sessionId);
-        $items = $this->buildItems($lineItems, $existingItems, $session);
+        $items = $this->buildItems($lineItems, $existingItems, $session, $productResolver);
 
         $order->set(OrderEntry::USER, $user->id());
         $order->set(OrderEntry::STATUS, $status);
@@ -104,7 +103,12 @@ class CheckoutSessionCompleted extends StripeWebhookJob
         return $this->normalizeLineItems($items);
     }
 
-    private function buildItems(array $lineItems, array $existingItems, array $session): array
+    private function buildItems(
+        array $lineItems,
+        array $existingItems,
+        array $session,
+        StripeLineItemProductResolver $productResolver
+    ): array
     {
         $items = [];
         $subscriptionId = StripePayload::string($session, 'subscription');
@@ -115,7 +119,7 @@ class CheckoutSessionCompleted extends StripeWebhookJob
                 continue;
             }
 
-            $product = $this->findProduct($lineItem);
+            $product = $productResolver->resolve($lineItem);
             if (! $product) {
                 continue;
             }
@@ -139,43 +143,6 @@ class CheckoutSessionCompleted extends StripeWebhookJob
         }
 
         return $items;
-    }
-
-    private function findProduct(array $lineItem): ?ProductEntry
-    {
-        $priceId = StripePayload::string($lineItem, 'price');
-        $price = StripePayload::array($lineItem, 'price');
-        $stripeProductId = StripePayload::string($price, 'product');
-        $billingType = StripePayload::array($price, 'recurring') !== []
-            ? BillingType::RECURRING->value
-            : BillingType::ONE_TIME->value;
-
-        if ($priceId === '') {
-            $priceId = StripePayload::string($price, 'id');
-        }
-
-        $query = Entry::query()->where('collection', ProductEntry::COLLECTION);
-
-        if ($priceId !== '') {
-            $match = $query->where(ProductEntry::STRIPE_PRICE_ID, $priceId)->first();
-            if ($match instanceof ProductEntry) {
-                return $match;
-            }
-        }
-
-        if ($stripeProductId !== '') {
-            $productQuery = $query;
-            if ($billingType) {
-                $productQuery = $productQuery->where(ProductEntry::BILLING_TYPE, $billingType);
-            }
-
-            $match = $productQuery->where(ProductEntry::STRIPE_PRODUCT_ID, $stripeProductId)->first();
-            if ($match instanceof ProductEntry) {
-                return $match;
-            }
-        }
-
-        return null;
     }
 
     private function indexExistingItems(mixed $items): array

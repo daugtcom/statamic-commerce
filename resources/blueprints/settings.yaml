@@ -28,3 +28,34 @@ tabs:
               display: 'daugt-commerce::settings.fields.next_order_number'
               instructions: 'daugt-commerce::settings.fields.next_order_number_instructions'
               default: 1
+  shipping:
+    display: 'daugt-commerce::settings.tabs.shipping'
+    sections:
+      -
+        fields:
+          -
+            handle: shipping_allowed_countries
+            field:
+              type: dictionary
+              dictionary: countries
+              display: 'daugt-commerce::settings.fields.shipping_allowed_countries'
+              instructions: 'daugt-commerce::settings.fields.shipping_allowed_countries_instructions'
+          -
+            handle: shipping_calculation_method
+            field:
+              type: dictionary
+              dictionary: shipping_calculation_methods
+              max_items: 1
+              default: sum
+              display: 'daugt-commerce::settings.fields.shipping_calculation_method'
+              instructions: 'daugt-commerce::settings.fields.shipping_calculation_method_instructions'
+          -
+            handle: shipping_flat_rate
+            field:
+              type: float
+              min: 0
+              step: 0.01
+              prepend: '€'
+              display: 'daugt-commerce::settings.fields.shipping_flat_rate'
+              instructions: 'daugt-commerce::settings.fields.shipping_flat_rate_instructions'
+              default: 0
