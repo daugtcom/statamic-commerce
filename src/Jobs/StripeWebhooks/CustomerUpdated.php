@@ -24,6 +24,7 @@ class CustomerUpdated extends StripeWebhookJob
 
         $billing = StripeAddress::fromCustomer($customer);
         $shipping = StripeAddress::fromShipping(StripePayload::array($customer, 'shipping'));
+        $fullName = StripePayload::string($customer, 'name');
 
         if ($billing !== []) {
             $user->set('billing_address', $billing);
@@ -33,7 +34,11 @@ class CustomerUpdated extends StripeWebhookJob
             $user->set('shipping_address', $shipping);
         }
 
-        if ($billing !== [] || $shipping !== []) {
+        if ($fullName !== '') {
+            $user->set('full_name', $fullName);
+        }
+
+        if ($billing !== [] || $shipping !== [] || $fullName !== '') {
             $user->saveQuietly();
         }
     }

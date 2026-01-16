@@ -15,6 +15,7 @@ use Daugt\Commerce\Enums\BillingType;
 use Daugt\Commerce\Enums\OrderStatus;
 use Daugt\Commerce\Enums\ShippingStatus;
 use Daugt\Commerce\Jobs\StripeWebhooks\CheckoutSessionCompleted;
+use Daugt\Commerce\Services\StripeLineItemProductResolver;
 use Statamic\Facades\Blueprint;
 use Statamic\Facades\Collection as CollectionFacade;
 use Statamic\Facades\Entry;
@@ -131,7 +132,7 @@ class StripeWebhookCheckoutSessionTest extends TestCase
         ]);
 
         $job = new CheckoutSessionCompleted($payload);
-        $job->handle($stripeClient);
+        $job->handle($stripeClient, new StripeLineItemProductResolver());
 
         $order = Entry::query()
             ->where('collection', OrderEntry::COLLECTION)
@@ -194,7 +195,7 @@ class StripeWebhookCheckoutSessionTest extends TestCase
         $stripeClient = new FakeStripeClient([]);
 
         $job = new CheckoutSessionCompleted($payload);
-        $job->handle($stripeClient);
+        $job->handle($stripeClient, new StripeLineItemProductResolver());
 
         $order = Entry::query()
             ->where('collection', OrderEntry::COLLECTION)
