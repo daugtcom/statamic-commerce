@@ -16,18 +16,23 @@ composer require daugtcom/statamic-commerce
 php please statamic:daugt-commerce:install
 ```
 
-### Scaffold optional storefront (listing/detail/search/filter)
+### Make optional storefront (listing/detail/search/filter/cart)
 
 ```bash
-php please statamic:daugt-commerce:scaffold-storefront
+php please statamic:daugt-commerce:make-storefront
 ```
 
-This scaffolds:
+This creates:
 - `resources/views/shop/index.antlers.html`
-- `resources/views/products/product.antlers.html` (if missing)
-- `routes/web.php` entry for `/shop`
+- `resources/views/shop/_cart.antlers.html`
+- `resources/views/products/product.antlers.html`
+- optional `pages/shop` entry using template `shop/index` (unless `--without-shop-page`)
 
-Use `--force` to overwrite scaffolded templates.
+Add `{{ partial:shop/cart }}` once in your main layout to mount the cart drawer globally.
+
+Use `--force` to overwrite existing storefront files or to re-ensure the generated shop page entry.
+
+Note: product detail routing stays collection-driven via the products collection route (`/shop/product/{slug}`), not by writing to `routes/web.php`.
 
 ## Storefront Tags
 

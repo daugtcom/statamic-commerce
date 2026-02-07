@@ -1,2 +1,0 @@
-// daugt-commerce storefront scaffolding
-Route::statamic('shop', 'shop/index');
