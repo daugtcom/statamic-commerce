@@ -3,9 +3,17 @@
 namespace Daugt\Commerce\Tags;
 
 use Daugt\Commerce\Carts\CartManager;
+use Daugt\Commerce\Entries\ProductEntry;
 use Daugt\Commerce\Payments\Contracts\PaymentProviderExtension;
 use Daugt\Commerce\Payments\PaymentProviderResolver;
 use Daugt\Commerce\Support\AddonSettings;
+use Illuminate\Support\Arr;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Str;
+use Statamic\Contracts\Entries\Entry as EntryContract;
+use Statamic\Contracts\Taxonomies\Term as TermContract;
+use Statamic\Facades\Entry;
+use Statamic\Facades\Term;
 use Statamic\Tags\Tags;
 
 class DaugtCommerceTags extends Tags
@@ -166,6 +174,64 @@ class DaugtCommerceTags extends Tags
         return view($definition['view'], $data)->render();
     }
 
+    public function storefrontProducts(): string|array
+    {
+        $products = $this->queryStorefrontProducts(
+            $this->stringParam('search'),
+            $this->stringParam('category'),
+            $this->stringParam('sort') ?: 'updated_desc',
+            $this->intParam('limit')
+        );
+
+        $items = $products->values()->all();
+
+        if (! $this->isPair) {
+            return $this->aliasedResult($items);
+        }
+
+        if ($items === []) {
+            return $this->parseNoResults();
+        }
+
+        return (string) $this->parseLoop(
+            array_map(
+                fn (ProductEntry $entry) => $this->storefrontProductRow($entry),
+                $items
+            )
+        );
+    }
+
+    public function storefrontCategories(): string|array
+    {
+        $taxonomy = $this->stringParam('taxonomy') ?: ProductEntry::CATEGORIES;
+        $activeCategory = $this->stringParam('category');
+        $products = $this->queryStorefrontProducts();
+        $categoryCounts = $this->categoryCounts($products, $taxonomy);
+        $terms = $this->termsForTaxonomy($taxonomy);
+
+        $items = $terms->map(function (TermContract $term) use ($categoryCounts, $activeCategory) {
+            $slug = (string) $term->slug();
+
+            return [
+                'slug' => $slug,
+                'title' => (string) ($term->title() ?: $slug),
+                'count' => (int) ($categoryCounts[$slug] ?? 0),
+                'active' => $activeCategory !== '' && $activeCategory === $slug,
+                'url' => $this->urlWithQuery(['category' => $slug]),
+            ];
+        })->values()->all();
+
+        if (! $this->isPair) {
+            return $this->aliasedResult($items);
+        }
+
+        if ($items === []) {
+            return $this->parseNoResults();
+        }
+
+        return $this->parseLoop($items);
+    }
+
     private function productId(): ?string
     {
         $param = $this->params->get('product_id')
@@ -178,6 +244,216 @@ class DaugtCommerceTags extends Tags
         $contextId = $this->context->raw('id');
 
         return is_string($contextId) && $contextId !== '' ? $contextId : null;
+    }
+
+    private function queryStorefrontProducts(
+        ?string $search = null,
+        ?string $category = null,
+        string $sort = 'updated_desc',
+        ?int $limit = null
+    ): Collection {
+        $products = Entry::query()
+            ->where('collection', ProductEntry::COLLECTION)
+            ->whereStatus('published')
+            ->get()
+            ->filter(fn ($entry) => $entry instanceof ProductEntry);
+
+        if ($search !== null && $search !== '') {
+            $needle = Str::lower($search);
+            $products = $products->filter(function (ProductEntry $entry) use ($needle) {
+                $title = Str::lower((string) ($entry->get(ProductEntry::TITLE) ?: ''));
+                $description = Str::lower($this->searchableDescription($entry->get(ProductEntry::DESCRIPTION)));
+
+                return Str::contains($title, $needle) || Str::contains($description, $needle);
+            });
+        }
+
+        if ($category !== null && $category !== '') {
+            $products = $products->filter(
+                fn (ProductEntry $entry) => $this->entryHasCategory($entry, $category)
+            );
+        }
+
+        $products = $this->sortProducts($products, $sort);
+
+        if ($limit !== null && $limit > 0) {
+            $products = $products->take($limit);
+        }
+
+        return $products->values();
+    }
+
+    private function sortProducts(Collection $products, string $sort): Collection
+    {
+        return match ($sort) {
+            'price_asc' => $products->sortBy(fn (ProductEntry $entry) => $entry->price() ?? INF),
+            'price_desc' => $products->sortByDesc(fn (ProductEntry $entry) => $entry->price() ?? -INF),
+            'title_asc' => $products->sortBy(fn (ProductEntry $entry) => Str::lower((string) ($entry->get(ProductEntry::TITLE) ?: ''))),
+            'title_desc' => $products->sortByDesc(fn (ProductEntry $entry) => Str::lower((string) ($entry->get(ProductEntry::TITLE) ?: ''))),
+            'updated_asc' => $products->sortBy(fn (ProductEntry $entry) => $this->entryTimestamp($entry)),
+            default => $products->sortByDesc(fn (ProductEntry $entry) => $this->entryTimestamp($entry)),
+        };
+    }
+
+    private function entryTimestamp(EntryContract $entry): int
+    {
+        $candidates = [
+            $entry->get('updated_at'),
+            $entry->get('created_at'),
+            $entry->get('date'),
+        ];
+
+        foreach ($candidates as $candidate) {
+            if ($candidate instanceof \DateTimeInterface) {
+                return $candidate->getTimestamp();
+            }
+
+            if (is_numeric($candidate)) {
+                return (int) $candidate;
+            }
+
+            if (is_string($candidate) && $candidate !== '') {
+                $timestamp = strtotime($candidate);
+                if ($timestamp !== false) {
+                    return $timestamp;
+                }
+            }
+        }
+
+        return 0;
+    }
+
+    private function searchableDescription(mixed $description): string
+    {
+        if (is_string($description)) {
+            return $description;
+        }
+
+        if (is_array($description)) {
+            return (string) json_encode($description);
+        }
+
+        return '';
+    }
+
+    private function storefrontProductRow(ProductEntry $entry): array
+    {
+        return [
+            'id' => (string) $entry->id(),
+            'slug' => (string) $entry->slug(),
+            'url' => (string) $entry->url(),
+            'title' => (string) ($entry->get(ProductEntry::TITLE) ?? ''),
+            'description' => $entry->get(ProductEntry::DESCRIPTION),
+            'price' => $entry->price(),
+            'media' => Arr::wrap($entry->get(ProductEntry::MEDIA)),
+            'external_product' => $entry->externalProduct(),
+            'external_product_url' => $entry->externalProductUrl(),
+        ];
+    }
+
+    private function entryHasCategory(ProductEntry $entry, string $category): bool
+    {
+        $normalizedCategory = Str::lower($category);
+        $terms = $this->normalizeCategoryValues($entry->get(ProductEntry::CATEGORIES), ProductEntry::CATEGORIES);
+
+        return in_array($normalizedCategory, $terms, true);
+    }
+
+    private function categoryCounts(Collection $products, string $taxonomy): array
+    {
+        $counts = [];
+
+        foreach ($products as $entry) {
+            if (! $entry instanceof ProductEntry) {
+                continue;
+            }
+
+            foreach ($this->normalizeCategoryValues($entry->get(ProductEntry::CATEGORIES), $taxonomy) as $slug) {
+                $counts[$slug] = ($counts[$slug] ?? 0) + 1;
+            }
+        }
+
+        return $counts;
+    }
+
+    private function normalizeCategoryValues(mixed $value, string $taxonomy): array
+    {
+        $slugs = [];
+
+        foreach (Arr::wrap($value) as $item) {
+            if ($item instanceof TermContract) {
+                $slug = (string) $item->slug();
+                if ($slug !== '') {
+                    $slugs[] = Str::lower($slug);
+                }
+                continue;
+            }
+
+            if (! is_string($item) || $item === '') {
+                continue;
+            }
+
+            $parts = explode('::', $item, 2);
+            $slug = count($parts) === 2 ? $parts[1] : $parts[0];
+            if ($slug === '') {
+                continue;
+            }
+
+            if (count($parts) === 2 && $parts[0] !== $taxonomy) {
+                continue;
+            }
+
+            $slugs[] = Str::lower($slug);
+        }
+
+        return array_values(array_unique($slugs));
+    }
+
+    private function termsForTaxonomy(string $taxonomy): Collection
+    {
+        $terms = Term::query()
+            ->where('taxonomy', $taxonomy)
+            ->get()
+            ->filter(fn ($term) => $term instanceof TermContract)
+            ->sortBy(fn (TermContract $term) => Str::lower((string) ($term->title() ?: $term->slug())))
+            ->values();
+
+        return $terms;
+    }
+
+    private function urlWithQuery(array $query): string
+    {
+        if (! request()) {
+            $category = $query['category'] ?? null;
+            return is_string($category) && $category !== '' ? '?category=' . $category : '#';
+        }
+
+        return request()->fullUrlWithQuery($query);
+    }
+
+    private function stringParam(string $key): ?string
+    {
+        $value = $this->params->get($key);
+        if (! is_string($value) || trim($value) === '') {
+            $queryValue = request()->query($key);
+            if (is_string($queryValue) && trim($queryValue) !== '') {
+                return trim($queryValue);
+            }
+
+            return null;
+        }
+
+        return trim($value);
+    }
+
+    private function intParam(string $key): ?int
+    {
+        $value = $this->params->get($key);
+        if ($value === null || $value === '') {
+            $value = request()->query($key);
+        }
+
+        return is_numeric($value) ? (int) $value : null;
     }
 
     private function activeExtension(): ?PaymentProviderExtension
