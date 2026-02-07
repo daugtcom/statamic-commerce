@@ -23,8 +23,18 @@ class MakeStorefrontCommandTest extends TestCase
         $this->assertFileExists($shopView);
         $this->assertFileExists($cartPartial);
         $this->assertFileExists($productView);
-        $sourceCart = dirname(__DIR__) . '/resources/views/shop/_cart.antlers.html';
-        $this->assertSame(rtrim(File::get($sourceCart)), rtrim(File::get($cartPartial)));
+        $this->assertSame(
+            rtrim(File::get($this->sourceTemplate('shop/index.antlers.html'))),
+            rtrim(File::get($shopView))
+        );
+        $this->assertSame(
+            rtrim(File::get($this->sourceTemplate('shop/_cart.antlers.html'))),
+            rtrim(File::get($cartPartial))
+        );
+        $this->assertSame(
+            rtrim(File::get($this->sourceTemplate('products/product.antlers.html'))),
+            rtrim(File::get($productView))
+        );
     }
 
     public function test_make_storefront_does_not_overwrite_existing_files_without_force(): void
@@ -54,5 +64,10 @@ class MakeStorefrontCommandTest extends TestCase
 
         $this->assertNotNull($entry);
         $this->assertSame('shop/index', $entry->get('template'));
+    }
+
+    private function sourceTemplate(string $relativePath): string
+    {
+        return dirname(__DIR__) . '/resources/views/' . ltrim($relativePath, '/');
     }
 }
