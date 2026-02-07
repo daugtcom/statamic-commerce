@@ -1,116 +1,97 @@
-<div class="container mx-auto mt-28 px-4 pb-12">
-    <div class="mb-8 rounded-xl bg-white p-6 shadow-sm">
-        <div class="mb-4 flex items-center justify-between gap-3">
-            <h1 class="text-2xl font-semibold text-slate-900">Shop</h1>
+<div class="bg-neutral-100">
+    <section class="py-24">
+        <div class="container mx-auto px-4">
+            <div class="rounded-xl border-2 border-neutral-200 bg-neutral-50 p-5 md:p-6">
+                <div class="mb-4 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+                    <div>
+                        <h1 class="text-3xl font-bold text-neutral-800">Shop</h1>
+                        <p class="mt-1 text-sm text-neutral-600">Browse products and open details for checkout options.</p>
+                    </div>
 
-            <button
-                type="button"
-                class="relative inline-flex items-center rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700"
-                onclick="document.querySelector('#daugt-commerce-cart')?.showModal()"
-            >
-                Cart
-                {{ if daugt_commerce:cart_count != "0" }}
-                    <span class="ml-2 inline-flex size-5 items-center justify-center rounded-full bg-slate-900 text-xs text-white">
-                        {{ daugt_commerce:cart_count }}
-                    </span>
-                {{ /if }}
-            </button>
-        </div>
-
-        <form method="GET" class="flex flex-col gap-3 md:flex-row md:items-center">
-            <input
-                type="search"
-                name="search"
-                value="{{ get:search }}"
-                placeholder="Search products"
-                class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
-            />
-
-            {{ if get:category }}
-                <input type="hidden" name="category" value="{{ get:category }}" />
-            {{ /if }}
-
-            <button type="submit" class="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white">
-                Search
-            </button>
-
-            {{ if get:search || get:category }}
-                <a href="{{ current_url }}" class="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700">
-                    Reset
-                </a>
-            {{ /if }}
-        </form>
-
-        <div class="mt-4 flex flex-wrap gap-2">
-            <a
-                href="{{ current_url }}"
-                class="rounded-full border px-3 py-1 text-sm {{ if !get:category }}border-slate-900 bg-slate-900 text-white{{ else }}border-slate-300 text-slate-700{{ /if }}"
-            >
-                All
-            </a>
-
-            {{ daugt_commerce:storefront_categories }}
-                <a
-                    href="{{ url }}"
-                    class="rounded-full border px-3 py-1 text-sm {{ if active }}border-slate-900 bg-slate-900 text-white{{ else }}border-slate-300 text-slate-700{{ /if }}"
-                >
-                    {{ title }}
-                    <span class="ml-1 text-xs opacity-80">{{ count }}</span>
-                </a>
-            {{ /daugt_commerce:storefront_categories }}
-        </div>
-    </div>
-
-    {{ daugt_commerce:storefront_products search="{get:search}" category="{get:category}" }}
-        {{ if no_results }}
-            <div class="rounded-xl border border-dashed border-slate-300 bg-white p-8 text-center text-slate-500">
-                No products found for your current filters.
-            </div>
-        {{ else }}
-            <article class="mb-6 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-                <div class="md:flex">
-                    <a href="{{ url }}" class="block md:w-72">
-                        {{ if media }}
-                            <img src="{{ glide :src="media[0]" width="900" height="600" fit="crop" }}" alt="{{ title }}" class="h-52 w-full object-cover md:h-full" />
-                        {{ else }}
-                            <div class="h-52 w-full bg-slate-100 md:h-full"></div>
+                    <button
+                        type="button"
+                        class="inline-flex items-center gap-2 rounded-md border-2 border-neutral-300 bg-white px-3 py-2 text-sm font-medium text-neutral-700 transition hover:border-primary-500"
+                        onclick="document.querySelector('#daugt-commerce-cart')?.showModal()"
+                    >
+                        <span>Cart</span>
+                        {{ if daugt_commerce:cart_count != "0" }}
+                            <span class="inline-flex size-5 items-center justify-center rounded-full bg-primary-600 text-xs text-white">
+                                {{ daugt_commerce:cart_count }}
+                            </span>
                         {{ /if }}
+                    </button>
+                </div>
+
+                <form method="GET" class="flex flex-col gap-3 md:flex-row md:items-center">
+                    <input
+                        type="search"
+                        name="search"
+                        value="{{ get:search }}"
+                        placeholder="Search products"
+                        class="w-full rounded-md border-2 border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-700"
+                    />
+
+                    {{ if get:category }}
+                        <input type="hidden" name="category" value="{{ get:category }}" />
+                    {{ /if }}
+
+                    <button type="submit" class="rounded-md bg-primary-600 px-4 py-2 text-sm font-medium text-white">
+                        Search
+                    </button>
+
+                    {{ if get:search || get:category }}
+                        <a href="{{ current_url }}" class="rounded-md border-2 border-neutral-300 bg-white px-4 py-2 text-sm font-medium text-neutral-700">
+                            Reset
+                        </a>
+                    {{ /if }}
+                </form>
+
+                <div class="mt-4 flex flex-wrap gap-2">
+                    <a
+                        href="{{ current_url }}"
+                        class="rounded-full border px-3 py-1 text-sm {{ if !get:category }}border-primary-600 bg-primary-600 text-white{{ else }}border-neutral-300 bg-white text-neutral-700{{ /if }}"
+                    >
+                        All
                     </a>
 
-                    <div class="flex flex-1 flex-col p-5">
-                        <div class="mb-2 flex items-start justify-between gap-4">
-                            <h2 class="text-xl font-semibold text-slate-900">
-                                <a href="{{ url }}">{{ title }}</a>
-                            </h2>
-                            <div class="shrink-0 text-base font-semibold text-slate-900">
-                                {{ daugt_commerce:money :value="price" }}
-                            </div>
+                    {{ daugt_commerce:storefront_categories }}
+                        <a
+                            href="{{ url }}"
+                            class="rounded-full border px-3 py-1 text-sm {{ if active }}border-primary-600 bg-primary-600 text-white{{ else }}border-neutral-300 bg-white text-neutral-700{{ /if }}"
+                        >
+                            {{ title }}
+                            <span class="ml-1 text-xs opacity-80">{{ count }}</span>
+                        </a>
+                    {{ /daugt_commerce:storefront_categories }}
+                </div>
+            </div>
+
+            <div class="mt-8 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                {{ daugt_commerce:storefront_products search="{get:search}" category="{get:category}" }}
+                    {{ if no_results }}
+                        <div class="col-span-full rounded-xl border-2 border-dashed border-neutral-300 bg-white p-10 text-center text-neutral-600">
+                            No products found for your current filters.
                         </div>
-
-                        {{ if description }}
-                            <div class="mb-4 text-sm text-slate-600 line-clamp-3">{{ description | strip_tags }}</div>
-                        {{ /if }}
-
-                        <div class="mt-auto flex flex-wrap items-center gap-2">
-                            {{ if external_product && external_product_url }}
-                                <a href="{{ external_product_url }}" target="_blank" rel="noopener" class="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white">
-                                    Buy external
-                                </a>
+                    {{ else }}
+                        <a href="{{ url }}" class="group flex h-full flex-col overflow-hidden rounded-md border-2 border-neutral-200 bg-neutral-50 transition hover:border-primary-500">
+                            {{ if media }}
+                                <img src="{{ glide :src="media[0]" width="1000" height="700" fit="crop" }}" alt="{{ title }}" class="aspect-[10/7] w-full object-cover group-hover:opacity-90" />
                             {{ else }}
-                                {{ daugt_commerce:add_to_cart }}
-                                    <button type="submit" class="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white">
-                                        Add to cart
-                                    </button>
-                                {{ /daugt_commerce:add_to_cart }}
+                                <div class="aspect-[10/7] w-full bg-neutral-200"></div>
                             {{ /if }}
 
-                            <a href="{{ url }}" class="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700">
-                                View details
-                            </a>
-                        </div>
-                    </div>
-                </div>
-            </article>
-        {{ /if }}
-    {{ /daugt_commerce:storefront_products }}
+                            <div class="flex flex-1 flex-col p-3">
+                                <h2 class="truncate text-base font-semibold text-neutral-800 group-hover:text-primary-700">{{ title }}</h2>
+                                <p class="mt-1 text-lg font-bold text-neutral-700">{{ daugt_commerce:money :value="price" }}</p>
+
+                                <div class="mt-4 inline-flex items-center text-sm font-medium text-primary-700">
+                                    View product
+                                </div>
+                            </div>
+                        </a>
+                    {{ /if }}
+                {{ /daugt_commerce:storefront_products }}
+            </div>
+        </div>
+    </section>
 </div>

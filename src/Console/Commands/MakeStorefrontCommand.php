@@ -17,8 +17,10 @@ class MakeStorefrontCommand extends Command
     protected $signature = 'statamic:daugt-commerce:make-storefront
         {--force : Overwrite existing storefront files}
         {--without-shop-page : Skip creating a shop page entry}
+        {--without-checkout-page : Skip creating a checkout page entry}
         {--page-collection=pages : Collection handle for the storefront listing page}
-        {--page-slug=shop : Slug for the storefront listing page}';
+        {--page-slug=shop : Slug for the storefront listing page}
+        {--checkout-slug=checkout : Slug for the checkout page}';
 
     protected $description = 'Create storefront example templates (listing/detail/cart) with optional shop page entry.';
 
@@ -32,14 +34,13 @@ class MakeStorefrontCommand extends Command
             $this->publishTemplate($source, $destination, $force);
         }
 
-        if (! (bool) $this->option('without-shop-page')) {
-            $this->ensureShopPage($force);
-        }
+        $this->ensureStorefrontPages($force);
 
         $this->newLine();
         $this->info('Storefront make command complete.');
         $this->line('- Product detail route is managed by the products collection route.');
         $this->line('- Listing route: /shop');
+        $this->line('- Checkout route: /checkout');
         $this->line('- Cart drawer partial: resources/views/shop/_cart.antlers.html');
         $this->line('- Include {{ partial:shop/cart }} once in your layout (for example in layout.antlers.html).');
 
@@ -66,20 +67,46 @@ class MakeStorefrontCommand extends Command
         $this->info("Published: {$this->relativePath($destinationPath)}");
     }
 
-    private function ensureShopPage(bool $force): void
+    private function ensureStorefrontPages(bool $force): void
     {
         $collectionHandle = (string) $this->option('page-collection');
-        $slug = (string) $this->option('page-slug');
-        $slug = trim(Str::slug($slug), '/');
+
+        if (! (bool) $this->option('without-shop-page')) {
+            $this->ensurePageEntry(
+                $collectionHandle,
+                (string) $this->option('page-slug'),
+                'shop/index',
+                $force
+            );
+        }
+
+        if (! (bool) $this->option('without-checkout-page')) {
+            $this->ensurePageEntry(
+                $collectionHandle,
+                (string) $this->option('checkout-slug'),
+                'checkout',
+                $force
+            );
+        }
+    }
+
+    private function ensurePageEntry(
+        string $collectionHandle,
+        string $slugOption,
+        string $template,
+        bool $force
+    ): void
+    {
+        $slug = trim(Str::slug($slugOption), '/');
 
         if ($slug === '') {
-            $this->warn('Shop page slug is empty after normalization, skipping shop page creation.');
+            $this->warn("Page slug is empty after normalization for template [{$template}], skipping page creation.");
             return;
         }
 
         $collection = Collection::find($collectionHandle);
         if (! $collection) {
-            $this->warn("Collection [{$collectionHandle}] not found. Create a page manually that uses template [shop/index].");
+            $this->warn("Collection [{$collectionHandle}] not found. Create a page manually that uses template [{$template}].");
             return;
         }
 
@@ -102,11 +129,11 @@ class MakeStorefrontCommand extends Command
         $entry->published(true);
         $entry->data(array_merge($entry->data()->all(), [
             'title' => $title,
-            'template' => 'shop/index',
+            'template' => $template,
         ]));
         $entry->save();
 
-        $this->info("Ensured page entry: {$collectionHandle}/{$slug}");
+        $this->info("Ensured page entry: {$collectionHandle}/{$slug} ({$template})");
     }
 
     private function storefrontTemplateMap(): array
@@ -115,6 +142,7 @@ class MakeStorefrontCommand extends Command
             $this->templateSourcePath('shop/index.antlers.html') => resource_path('views/shop/index.antlers.html'),
             $this->templateSourcePath('shop/_cart.antlers.html') => resource_path('views/shop/_cart.antlers.html'),
             $this->templateSourcePath('products/product.antlers.html') => resource_path('views/products/product.antlers.html'),
+            $this->templateSourcePath('checkout.antlers.html') => resource_path('views/checkout.antlers.html'),
         ];
     }
 

@@ -26,12 +26,14 @@ This creates:
 - `resources/views/shop/index.antlers.html`
 - `resources/views/shop/_cart.antlers.html`
 - `resources/views/products/product.antlers.html`
+- `resources/views/checkout.antlers.html`
 - optional `pages/shop` entry using template `shop/index` (unless `--without-shop-page`)
+- optional `pages/checkout` entry using template `checkout` (unless `--without-checkout-page`)
 
 Add `{{ partial:shop/cart }}` once in your main layout to mount the cart drawer globally.
 Storefront templates are copied from addon source views in `resources/views/...` (shop index, cart partial, product detail).
 
-Use `--force` to overwrite existing storefront files or to re-ensure the generated shop page entry.
+Use `--force` to overwrite existing storefront files or to re-ensure the generated storefront page entries.
 
 Note: product detail routing stays collection-driven via the products collection route (`/shop/product/{slug}`), not by writing to `routes/web.php`.
 
