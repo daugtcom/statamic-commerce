@@ -2,6 +2,7 @@
 
 namespace Daugt\Commerce\Console\Commands;
 
+use Daugt\Commerce\Console\AsciiArt;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
@@ -23,6 +24,8 @@ class MakeStorefrontCommand extends Command
 
     public function handle(): int
     {
+        $this->output->write((new AsciiArt())());
+
         $force = (bool) $this->option('force');
 
         $files = [
