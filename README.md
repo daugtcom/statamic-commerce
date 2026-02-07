@@ -29,6 +29,7 @@ This creates:
 - optional `pages/shop` entry using template `shop/index` (unless `--without-shop-page`)
 
 Add `{{ partial:shop/cart }}` once in your main layout to mount the cart drawer globally.
+The generated cart partial is copied from the addon component at `resources/views/shop/_cart.antlers.html`.
 
 Use `--force` to overwrite existing storefront files or to re-ensure the generated shop page entry.
 

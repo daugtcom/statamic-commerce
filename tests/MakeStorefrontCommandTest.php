@@ -23,7 +23,8 @@ class MakeStorefrontCommandTest extends TestCase
         $this->assertFileExists($shopView);
         $this->assertFileExists($cartPartial);
         $this->assertFileExists($productView);
-        $this->assertStringContainsString('#daugt-commerce-cart', File::get($cartPartial));
+        $sourceCart = dirname(__DIR__) . '/resources/views/shop/_cart.antlers.html';
+        $this->assertSame(rtrim(File::get($sourceCart)), rtrim(File::get($cartPartial)));
     }
 
     public function test_make_storefront_does_not_overwrite_existing_files_without_force(): void

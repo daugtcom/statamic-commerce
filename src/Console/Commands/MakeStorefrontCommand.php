@@ -232,80 +232,13 @@ ANTLERS;
 
     private function shopCartTemplate(): string
     {
-        return <<<'ANTLERS'
-<style>
-    #daugt-commerce-cart, #daugt-commerce-cart::backdrop {
-        transition: display 0.5s allow-discrete, overlay 0.5s allow-discrete, opacity 0.5s;
-        opacity: 0;
+        $source = __DIR__ . '/../../../resources/views/shop/_cart.antlers.html';
 
-        &[open], &[open]::backdrop {
-            opacity: 1;
-
-            @starting-style {
-                opacity: 0;
-            }
+        if (! File::exists($source)) {
+            throw new \RuntimeException('Missing storefront cart template at resources/views/shop/_cart.antlers.html');
         }
-    }
-</style>
 
-<dialog id="daugt-commerce-cart" class="[&::backdrop]:backdrop-blur [&::backdrop]:bg-black/30 w-96 h-screen ml-auto my-auto p-4 rounded-l-lg flex flex-col" closedby="any">
-    <div class="flex items-start justify-between">
-        <h2 id="drawer-title" class="text-lg font-medium text-gray-900">{{ trans:daugt-commerce::cart.title }}</h2>
-        <div class="ml-3 flex h-7 items-center">
-            <form method="dialog">
-                <button type="submit" class="relative -m-2 p-2 text-gray-400 hover:text-gray-500">
-                    <span class="absolute -inset-0.5"></span>
-                    <span class="sr-only">Close panel</span>
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" data-slot="icon" aria-hidden="true" class="size-6">
-                        <path d="M6 18 18 6M6 6l12 12" stroke-linecap="round" stroke-linejoin="round" />
-                    </svg>
-                </button>
-            </form>
-        </div>
-    </div>
-    <ul role="list" class="divide-y divide-gray-200 flex-grow">
-        {{ daugt_commerce:cart_items }}
-            <li class="flex py-6">
-                <div class="size-24 shrink-0 overflow-hidden rounded-md border border-gray-200">
-                    <img src="{{ glide :src="entry.media[0]" square="256" }}" class="size-full object-cover" />
-                </div>
-
-                <div class="ml-4 flex flex-1 flex-col">
-                    <div>
-                        <div class="flex justify-between text-base font-medium text-gray-900">
-                            <h3><a href="{{ entry.url }}">{{ entry.title }}</a></h3>
-                            <p class="ml-4">{{ daugt_commerce:money :value="entry.price" }}</p>
-                        </div>
-                        <p class="mt-1 text-sm text-gray-500">
-                            {{ if entry.shipping }}
-                                {{ trans:daugt-commerce::products.fields.shipping }}
-                            {{ /if }}
-                            {{ if entry.billing_type == "recurring" }}
-                                {{ trans:daugt-commerce::billing-types.recurring }}
-                            {{ /if }}
-                        </p>
-                    </div>
-                    <div class="flex flex-1 items-end justify-between text-sm">
-                        <p class="text-gray-500">{{ trans:daugt-commerce::cart.quantity :count="quantity" }}</p>
-
-                        <div class="flex">
-                            {{ daugt_commerce:remove_from_cart :product_id="product_id" }}
-                                <button class="font-medium text-primary-600 hover:text-primary-500">
-                                    {{ trans:daugt-commerce::cart.remove }}
-                                </button>
-                            {{ /daugt_commerce:remove_from_cart }}
-                        </div>
-                    </div>
-                </div>
-            </li>
-        {{ /daugt_commerce:cart_items }}
-    </ul>
-
-    <a class="button-primary" href="{{ link to="checkout" }}">
-        {{ trans:daugt-commerce::cart.go-to-checkout }}
-    </a>
-</dialog>
-ANTLERS;
+        return File::get($source);
     }
 
     private function productTemplate(): string
