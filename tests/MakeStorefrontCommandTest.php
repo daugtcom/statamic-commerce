@@ -8,7 +8,7 @@ use Statamic\Facades\Entry;
 
 class MakeStorefrontCommandTest extends TestCase
 {
-    public function test_make_storefront_creates_views_and_cart_partial(): void
+    public function test_make_shop_creates_views_and_cart_partial(): void
     {
         $shopView = resource_path('views/shop/index.antlers.html');
         $cartPartial = resource_path('views/shop/_cart.antlers.html');
@@ -20,7 +20,7 @@ class MakeStorefrontCommandTest extends TestCase
         File::delete($productView);
         File::delete($checkoutView);
 
-        $this->artisan('statamic:daugt-commerce:make-storefront --without-shop-page --without-checkout-page')->assertExitCode(0);
+        $this->artisan('statamic:daugt-commerce:make-shop --without-shop-page --without-checkout-page')->assertExitCode(0);
 
         $this->assertFileExists($shopView);
         $this->assertFileExists($cartPartial);
@@ -44,25 +44,25 @@ class MakeStorefrontCommandTest extends TestCase
         );
     }
 
-    public function test_make_storefront_does_not_overwrite_existing_files_without_force(): void
+    public function test_make_shop_does_not_overwrite_existing_files_without_force(): void
     {
         $productView = resource_path('views/products/product.antlers.html');
 
         File::ensureDirectoryExists(dirname($productView));
         File::put($productView, 'custom product template');
 
-        $this->artisan('statamic:daugt-commerce:make-storefront --without-shop-page --without-checkout-page')->assertExitCode(0);
+        $this->artisan('statamic:daugt-commerce:make-shop --without-shop-page --without-checkout-page')->assertExitCode(0);
 
         $this->assertSame('custom product template', File::get($productView));
     }
 
-    public function test_make_storefront_can_ensure_shop_and_checkout_page_entries(): void
+    public function test_make_shop_can_ensure_shop_and_checkout_page_entries(): void
     {
         $pages = CollectionFacade::make('pages');
         $pages->title('Pages');
         $pages->save();
 
-        $this->artisan('statamic:daugt-commerce:make-storefront')->assertExitCode(0);
+        $this->artisan('statamic:daugt-commerce:make-shop')->assertExitCode(0);
 
         $shopEntry = Entry::query()
             ->where('collection', 'pages')
@@ -78,6 +78,18 @@ class MakeStorefrontCommandTest extends TestCase
         $this->assertNotNull($checkoutEntry);
         $this->assertSame('shop/index', $shopEntry->get('template'));
         $this->assertSame('checkout', $checkoutEntry->get('template'));
+    }
+
+    public function test_make_storefront_command_alias_still_works(): void
+    {
+        $this->artisan('statamic:daugt-commerce:make-storefront --without-shop-page --without-checkout-page')
+            ->assertExitCode(0);
+    }
+
+    public function test_make_store_command_alias_still_works(): void
+    {
+        $this->artisan('statamic:daugt-commerce:make-store --without-shop-page --without-checkout-page')
+            ->assertExitCode(0);
     }
 
     private function sourceTemplate(string $relativePath): string

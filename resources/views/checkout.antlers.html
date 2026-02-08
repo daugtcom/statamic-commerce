@@ -1,58 +1,22 @@
-<div class="bg-neutral-100">
-    <section class="py-24">
-        <div class="container mx-auto px-4">
-            <div class="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-                <div>
-                    <h1 class="text-3xl font-bold text-neutral-800">Checkout</h1>
-                    <p class="mt-1 text-sm text-neutral-600">Review your cart and complete payment.</p>
-                </div>
-
-                <a href="/shop" class="inline-flex items-center text-sm font-medium text-neutral-600 hover:text-neutral-900">
-                    ← Continue shopping
-                </a>
-            </div>
-
-            {{ if daugt_commerce:cart_count == "0" }}
-                <div class="rounded-xl border-2 border-dashed border-neutral-300 bg-white p-10 text-center text-neutral-600">
-                    Your cart is empty.
-                </div>
-            {{ else }}
-                <div class="grid grid-cols-1 gap-8 lg:grid-cols-5">
-                    <div class="lg:col-span-2 rounded-xl border-2 border-neutral-200 bg-neutral-50 p-5">
-                        <h2 class="mb-4 text-lg font-semibold text-neutral-800">Order summary</h2>
-
-                        <ul role="list" class="space-y-4">
-                            {{ daugt_commerce:cart_items }}
-                                <li class="flex gap-3 rounded-md border border-neutral-200 bg-white p-3">
-                                    <div class="size-16 shrink-0 overflow-hidden rounded-md border border-neutral-200">
-                                        <img src="{{ glide :src="entry.media[0]" square="160" }}" alt="{{ entry.title }}" class="size-full object-cover" />
-                                    </div>
-
-                                    <div class="min-w-0 flex-1">
-                                        <a href="{{ entry.url }}" class="truncate text-sm font-medium text-neutral-800 hover:text-primary-700">{{ entry.title }}</a>
-                                        <div class="mt-1 text-sm text-neutral-600">{{ daugt_commerce:money :value="entry.price" }}</div>
-                                        <div class="mt-1 text-xs text-neutral-500">Qty {{ quantity }}</div>
-                                    </div>
-
-                                    <div class="shrink-0">
-                                        {{ daugt_commerce:remove_from_cart :product_id="product_id" redirect="/checkout" }}
-                                            <button class="text-xs font-medium text-primary-700 hover:text-primary-600">Remove</button>
-                                        {{ /daugt_commerce:remove_from_cart }}
-                                    </div>
-                                </li>
-                            {{ /daugt_commerce:cart_items }}
-                        </ul>
-                    </div>
-
-                    <div class="lg:col-span-3 rounded-xl border-2 border-neutral-200 bg-neutral-50 p-5">
-                        <h2 class="mb-4 text-lg font-semibold text-neutral-800">Secure checkout</h2>
-                        {{ daugt_commerce:checkout return_url="{ current_url }" }}
-                        <p class="mt-4 text-xs text-neutral-500">
-                            If checkout does not appear, ensure products in the cart have Stripe price IDs.
-                        </p>
-                    </div>
-                </div>
-            {{ /if }}
+<div class="container mx-auto mt-28 px-4 pb-12">
+    <div class="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+            <h1 class="text-3xl font-bold text-neutral-800">{{ trans:daugt-commerce::checkout.title }}</h1>
+            <p class="mt-1 text-sm text-neutral-600">{{ trans:daugt-commerce::checkout.subtitle }}</p>
         </div>
-    </section>
+
+        <a href="/shop" class="inline-flex items-center text-sm font-medium text-neutral-600 hover:text-neutral-900">
+            ← {{ trans:daugt-commerce::checkout.continue_shopping }}
+        </a>
+    </div>
+
+    {{ if daugt_commerce:cart_count == "0" }}
+        <div class="rounded-xl border border-dashed border-neutral-300 bg-white p-10 text-center text-neutral-600">
+            {{ trans:daugt-commerce::checkout.empty }}
+        </div>
+    {{ else }}
+        <div class="overflow-hidden rounded-xl border border-neutral-200 bg-white p-2 md:p-4">
+            {{ daugt_commerce:checkout return_url="{ current_url }" }}
+        </div>
+    {{ /if }}
 </div>

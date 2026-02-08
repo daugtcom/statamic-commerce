@@ -174,9 +174,9 @@ class DaugtCommerceTags extends Tags
         return view($definition['view'], $data)->render();
     }
 
-    public function storefrontProducts(): string|array
+    public function shopProducts(): string|array
     {
-        $products = $this->queryStorefrontProducts(
+        $products = $this->queryShopProducts(
             $this->stringParam('search'),
             $this->stringParam('category'),
             $this->stringParam('sort') ?: 'updated_desc',
@@ -195,17 +195,27 @@ class DaugtCommerceTags extends Tags
 
         return (string) $this->parseLoop(
             array_map(
-                fn (ProductEntry $entry) => $this->storefrontProductRow($entry),
+                fn (ProductEntry $entry) => $this->shopProductRow($entry),
                 $items
             )
         );
     }
 
-    public function storefrontCategories(): string|array
+    public function storefrontProducts(): string|array
+    {
+        return $this->shopProducts();
+    }
+
+    public function storeProducts(): string|array
+    {
+        return $this->shopProducts();
+    }
+
+    public function shopCategories(): string|array
     {
         $taxonomy = $this->stringParam('taxonomy') ?: ProductEntry::CATEGORIES;
         $activeCategory = $this->stringParam('category');
-        $products = $this->queryStorefrontProducts();
+        $products = $this->queryShopProducts();
         $categoryCounts = $this->categoryCounts($products, $taxonomy);
         $terms = $this->termsForTaxonomy($taxonomy);
 
@@ -232,6 +242,16 @@ class DaugtCommerceTags extends Tags
         return $this->parseLoop($items);
     }
 
+    public function storefrontCategories(): string|array
+    {
+        return $this->shopCategories();
+    }
+
+    public function storeCategories(): string|array
+    {
+        return $this->shopCategories();
+    }
+
     private function productId(): ?string
     {
         $param = $this->params->get('product_id')
@@ -246,7 +266,7 @@ class DaugtCommerceTags extends Tags
         return is_string($contextId) && $contextId !== '' ? $contextId : null;
     }
 
-    private function queryStorefrontProducts(
+    private function queryShopProducts(
         ?string $search = null,
         ?string $category = null,
         string $sort = 'updated_desc',
@@ -336,19 +356,48 @@ class DaugtCommerceTags extends Tags
         return '';
     }
 
-    private function storefrontProductRow(ProductEntry $entry): array
+    private function shopProductRow(ProductEntry $entry): array
     {
+        $media = $this->shopProductMedia($entry);
+        $descriptionPreview = trim(strip_tags($this->searchableDescription($entry->get(ProductEntry::DESCRIPTION))));
+
         return [
             'id' => (string) $entry->id(),
             'slug' => (string) $entry->slug(),
             'url' => (string) $entry->url(),
             'title' => (string) ($entry->get(ProductEntry::TITLE) ?? ''),
             'description' => $entry->get(ProductEntry::DESCRIPTION),
+            'description_preview' => Str::limit($descriptionPreview, 120),
             'price' => $entry->price(),
-            'media' => Arr::wrap($entry->get(ProductEntry::MEDIA)),
+            'media' => $media,
+            'image' => $media[0] ?? null,
             'external_product' => $entry->externalProduct(),
             'external_product_url' => $entry->externalProductUrl(),
         ];
+    }
+
+    private function shopProductMedia(ProductEntry $entry): array
+    {
+        try {
+            $augmented = $entry->augmentedValue(ProductEntry::MEDIA);
+            if ($augmented !== null) {
+                $value = $augmented->value();
+
+                if ($value instanceof \Statamic\Assets\OrderedQueryBuilder) {
+                    $value = $value->get();
+                }
+
+                if ($value instanceof Collection) {
+                    return $value->values()->all();
+                }
+
+                return Arr::wrap($value);
+            }
+        } catch (\Throwable) {
+            // Some test environments do not provide an assets container.
+        }
+
+        return Arr::wrap($entry->get(ProductEntry::MEDIA));
     }
 
     private function entryHasCategory(ProductEntry $entry, string $category): bool

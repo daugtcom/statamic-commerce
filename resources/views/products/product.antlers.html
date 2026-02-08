@@ -1,89 +1,56 @@
-<div class="bg-neutral-100">
-    <section class="py-24">
-        <div class="container mx-auto px-4">
-            <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <a href="/shop" class="inline-flex items-center text-sm font-medium text-neutral-600 hover:text-neutral-900">
-                    ← Back to shop
-                </a>
+<div class="container mx-auto mt-28 px-4 pb-12">
+    <a href="/shop" class="inline-flex items-center text-sm font-medium text-neutral-600 hover:text-neutral-900">
+        ← {{ trans:daugt-commerce::shop.back_to_shop }}
+    </a>
 
-                <button
-                    type="button"
-                    class="inline-flex items-center gap-2 rounded-md border-2 border-neutral-300 bg-white px-3 py-2 text-sm font-medium text-neutral-700 transition hover:border-primary-500"
-                    onclick="document.querySelector('#daugt-commerce-cart')?.showModal()"
-                >
-                    <span>Cart</span>
-                    {{ if daugt_commerce:cart_count != "0" }}
-                        <span class="inline-flex size-5 items-center justify-center rounded-full bg-primary-600 text-xs text-white">
-                            {{ daugt_commerce:cart_count }}
-                        </span>
-                    {{ /if }}
-                </button>
-            </div>
-
-            <div class="mt-8 grid grid-cols-1 gap-10 lg:grid-cols-5 lg:gap-12">
-                <div class="lg:col-span-3">
-                    <div class="overflow-hidden rounded-lg border-2 border-neutral-200 bg-neutral-50">
-                        {{ if media }}
-                            <img src="{{ glide :src="media[0]" width="1200" height="820" fit="crop" }}" alt="{{ title }}" class="w-full object-cover" />
-                        {{ else }}
-                            <div class="aspect-[10/7] w-full bg-neutral-200"></div>
-                        {{ /if }}
-                    </div>
-                </div>
-
-                <div class="lg:col-span-2">
-                    <div class="flex h-full flex-col rounded-xl border-2 border-neutral-200 bg-neutral-50 p-6">
-                        <h1 class="text-3xl font-bold text-neutral-800">{{ title }}</h1>
-
-                        <div class="mt-4 flex items-center justify-between border-y border-neutral-200 py-4">
-                            <div class="text-2xl font-bold text-neutral-800">{{ daugt_commerce:money :value="price" }}</div>
-                        </div>
-
-                        <ul class="mt-5 space-y-2 text-sm text-neutral-600">
-                            {{ if shipping }}
-                                <li class="flex items-center gap-2">
-                                    <span>•</span>
-                                    <span>Shipping product</span>
-                                </li>
-                            {{ /if }}
-
-                            {{ if billing_type == "recurring" }}
-                                <li class="flex items-center gap-2">
-                                    <span>•</span>
-                                    <span>Recurring billing</span>
-                                </li>
-                            {{ /if }}
-                        </ul>
-
-                        <div class="mt-8 flex flex-col gap-2">
-                            {{ if external_product && external_product_url }}
-                                <a href="{{ external_product_url }}" target="_blank" rel="noopener" class="inline-flex items-center justify-center rounded-md bg-primary-600 px-4 py-2 text-sm font-medium text-white">
-                                    Buy external
-                                </a>
-                            {{ else }}
-                                {{ daugt_commerce:add_to_cart }}
-                                    <button type="submit" class="inline-flex items-center justify-center rounded-md bg-primary-600 px-4 py-2 text-sm font-medium text-white">
-                                        Add to cart
-                                    </button>
-                                {{ /daugt_commerce:add_to_cart }}
-                            {{ /if }}
-
-                            <a href="/checkout" class="inline-flex items-center justify-center rounded-md border-2 border-neutral-300 bg-white px-4 py-2 text-sm font-medium text-neutral-700">
-                                Go to checkout
-                            </a>
-                        </div>
-                    </div>
-                </div>
-
-                {{ if description }}
-                    <div class="lg:col-span-5">
-                        <div class="rounded-xl border-2 border-neutral-200 bg-neutral-50 p-6">
-                            <h2 class="text-lg font-semibold text-neutral-800">Description</h2>
-                            <div class="prose prose-neutral mt-3 max-w-none">{{ description }}</div>
-                        </div>
-                    </div>
+    <div class="mt-8 grid grid-cols-1 gap-10 lg:grid-cols-5 lg:gap-12">
+        <div class="lg:col-span-3">
+            <div class="overflow-hidden rounded-lg border border-neutral-200 bg-neutral-50">
+                {{ if media[0] }}
+                    <img src="{{ glide :src="media[0]" width="1200" height="820" fit="crop" }}" alt="{{ title }}" class="w-full object-cover" />
+                {{ else }}
+                    <div class="aspect-[10/7] w-full bg-neutral-200"></div>
                 {{ /if }}
             </div>
         </div>
-    </section>
+
+        <div class="lg:col-span-2">
+            <h1 class="text-2xl font-bold text-neutral-800 sm:text-3xl">{{ title }}</h1>
+
+            <div class="mt-5 border-y border-neutral-300 py-4">
+                <div class="text-2xl font-bold text-neutral-800">{{ daugt_commerce:money :value="price" }}</div>
+            </div>
+
+            <div class="mt-4">
+                {{ if external_product && external_product_url }}
+                    <a href="{{ external_product_url }}" target="_blank" rel="noopener" class="inline-flex items-center justify-center rounded-md bg-primary-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-primary-700">
+                        {{ trans:daugt-commerce::shop.buy_external }}
+                    </a>
+                {{ else }}
+                    {{ daugt_commerce:add_to_cart redirect="{ current_url }" }}
+                        <button type="submit" class="inline-flex items-center justify-center rounded-md bg-primary-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-primary-700">
+                            {{ trans:daugt-commerce::shop.add_to_cart }}
+                        </button>
+                    {{ /daugt_commerce:add_to_cart }}
+                {{ /if }}
+            </div>
+
+            <ul class="mt-6 space-y-2 text-sm text-neutral-600">
+                {{ if shipping }}
+                    <li>{{ trans:daugt-commerce::shop.shipping_product }}</li>
+                {{ /if }}
+
+                {{ if billing_type == "recurring" }}
+                    <li>{{ trans:daugt-commerce::shop.recurring_billing }}</li>
+                {{ /if }}
+            </ul>
+        </div>
+
+        {{ if description }}
+            <div class="lg:col-span-3">
+                <h2 class="text-lg font-semibold text-neutral-800">{{ trans:daugt-commerce::shop.description }}</h2>
+                <div class="prose prose-neutral mt-3 max-w-none">{{ description }}</div>
+            </div>
+        {{ /if }}
+    </div>
 </div>

@@ -29,7 +29,7 @@ class StorefrontTagsTest extends TestCase
         $this->makeTerm('tech', 'Tech');
     }
 
-    public function test_storefront_products_filters_by_search_and_category(): void
+    public function test_shop_products_filters_by_search_and_category(): void
     {
         $this->makeProduct('prod-1', 'Breath Course', ['categories::wellness'], true, 'Breathwork basics');
         $this->makeProduct('prod-2', 'Coding Mastery', ['categories::tech'], true, 'Advanced coding');
@@ -40,7 +40,7 @@ class StorefrontTagsTest extends TestCase
             'category' => 'wellness',
         ]);
 
-        $result = $this->makeTags()->storefrontProducts();
+        $result = $this->makeTags()->shopProducts();
 
         $this->assertIsArray($result);
         $this->assertCount(1, $result);
@@ -48,7 +48,7 @@ class StorefrontTagsTest extends TestCase
         $this->assertSame('prod-1', (string) $result[0]->id());
     }
 
-    public function test_storefront_categories_returns_counts_and_active_state(): void
+    public function test_shop_categories_returns_counts_and_active_state(): void
     {
         $this->makeProduct('prod-4', 'Morning Practice', ['categories::wellness'], true);
         $this->makeProduct('prod-5', 'Code Lab', ['categories::tech'], true);
@@ -58,7 +58,7 @@ class StorefrontTagsTest extends TestCase
             'category' => 'wellness',
         ]);
 
-        $rows = $this->makeTags()->storefrontCategories();
+        $rows = $this->makeTags()->shopCategories();
 
         $this->assertIsArray($rows);
 
@@ -74,24 +74,46 @@ class StorefrontTagsTest extends TestCase
         $this->assertFalse($tech['active']);
     }
 
-    public function test_storefront_products_tag_pair_renders_product_context(): void
+    public function test_shop_products_tag_pair_renders_product_context(): void
     {
         $this->makeProduct('prod-pair-1', 'Pair Product', ['categories::wellness'], true, 'Pair description');
 
         $output = Antlers::parse(
-            '{{ daugt_commerce:storefront_products }}{{ id }}|{{ title }}{{ /daugt_commerce:storefront_products }}'
+            '{{ daugt_commerce:shop_products }}{{ id }}|{{ title }}{{ /daugt_commerce:shop_products }}'
         );
 
         $this->assertSame('prod-pair-1|Pair Product', trim($output));
     }
 
-    public function test_storefront_products_tag_pair_renders_no_results_block(): void
+    public function test_shop_products_tag_pair_renders_no_results_block(): void
     {
         $output = Antlers::parse(
-            '{{ daugt_commerce:storefront_products search="does-not-exist" }}{{ if no_results }}No results{{ else }}{{ title }}{{ /if }}{{ /daugt_commerce:storefront_products }}'
+            '{{ daugt_commerce:shop_products search="does-not-exist" }}{{ if no_results }}No results{{ else }}{{ title }}{{ /if }}{{ /daugt_commerce:shop_products }}'
         );
 
         $this->assertSame('No results', trim($output));
+    }
+
+    public function test_storefront_tag_alias_still_works(): void
+    {
+        $this->makeProduct('prod-pair-2', 'Alias Product', ['categories::wellness'], true, 'Alias description');
+
+        $output = Antlers::parse(
+            '{{ daugt_commerce:storefront_products }}{{ title }}{{ /daugt_commerce:storefront_products }}'
+        );
+
+        $this->assertStringContainsString('Alias Product', $output);
+    }
+
+    public function test_store_tag_alias_still_works(): void
+    {
+        $this->makeProduct('prod-pair-3', 'Store Alias Product', ['categories::wellness'], true, 'Alias description');
+
+        $output = Antlers::parse(
+            '{{ daugt_commerce:store_products }}{{ title }}{{ /daugt_commerce:store_products }}'
+        );
+
+        $this->assertStringContainsString('Store Alias Product', $output);
     }
 
     private function makeTags(array $params = []): DaugtCommerceTags
@@ -102,8 +124,8 @@ class StorefrontTagsTest extends TestCase
             'content' => '',
             'context' => [],
             'params' => $params,
-            'tag' => 'daugt_commerce:storefront_products',
-            'tag_method' => 'storefront_products',
+            'tag' => 'daugt_commerce:shop_products',
+            'tag_method' => 'shop_products',
         ]);
 
         return $tags;

@@ -10,19 +10,25 @@ use Statamic\Console\RunsInPlease;
 use Statamic\Facades\Collection;
 use Statamic\Facades\Entry;
 
-class MakeStorefrontCommand extends Command
+class MakeShopCommand extends Command
 {
     use RunsInPlease;
 
-    protected $signature = 'statamic:daugt-commerce:make-storefront
-        {--force : Overwrite existing storefront files}
+    protected $signature = 'statamic:daugt-commerce:make-shop
+        {--force : Overwrite existing shop template files}
         {--without-shop-page : Skip creating a shop page entry}
         {--without-checkout-page : Skip creating a checkout page entry}
-        {--page-collection=pages : Collection handle for the storefront listing page}
-        {--page-slug=shop : Slug for the storefront listing page}
+        {--page-collection=pages : Collection handle for the shop listing page}
+        {--page-slug=shop : Slug for the shop listing page}
         {--checkout-slug=checkout : Slug for the checkout page}';
 
-    protected $description = 'Create storefront example templates (listing/detail/cart) with optional shop page entry.';
+    protected $aliases = [
+        'statamic:daugt-commerce:make-shop',
+        'statamic:daugt-commerce:make-store',
+        'statamic:daugt-commerce:make-storefront',
+    ];
+
+    protected $description = 'Create shop example templates (listing/detail/cart) with optional shop page entry.';
 
     public function handle(): int
     {
@@ -30,14 +36,14 @@ class MakeStorefrontCommand extends Command
 
         $force = (bool) $this->option('force');
 
-        foreach ($this->storefrontTemplateMap() as $source => $destination) {
+        foreach ($this->shopTemplateMap() as $source => $destination) {
             $this->publishTemplate($source, $destination, $force);
         }
 
-        $this->ensureStorefrontPages($force);
+        $this->ensureShopPages($force);
 
         $this->newLine();
-        $this->info('Storefront make command complete.');
+        $this->info('Shop templates published successfully.');
         $this->line('- Product detail route is managed by the products collection route.');
         $this->line('- Listing route: /shop');
         $this->line('- Checkout route: /checkout');
@@ -51,7 +57,7 @@ class MakeStorefrontCommand extends Command
     {
         if (! File::exists($sourcePath)) {
             throw new \RuntimeException(sprintf(
-                'Missing storefront template source at [%s].',
+                'Missing shop template source at [%s].',
                 $sourcePath
             ));
         }
@@ -67,7 +73,7 @@ class MakeStorefrontCommand extends Command
         $this->info("Published: {$this->relativePath($destinationPath)}");
     }
 
-    private function ensureStorefrontPages(bool $force): void
+    private function ensureShopPages(bool $force): void
     {
         $collectionHandle = (string) $this->option('page-collection');
 
@@ -136,7 +142,7 @@ class MakeStorefrontCommand extends Command
         $this->info("Ensured page entry: {$collectionHandle}/{$slug} ({$template})");
     }
 
-    private function storefrontTemplateMap(): array
+    private function shopTemplateMap(): array
     {
         return [
             $this->templateSourcePath('shop/index.antlers.html') => resource_path('views/shop/index.antlers.html'),
