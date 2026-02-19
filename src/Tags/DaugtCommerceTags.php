@@ -195,7 +195,7 @@ class DaugtCommerceTags extends Tags
 
         return (string) $this->parseLoop(
             array_map(
-                fn (ProductEntry $entry) => $this->shopProductRow($entry),
+                fn (EntryContract $entry) => $this->shopProductRow($entry),
                 $items
             )
         );
@@ -276,11 +276,11 @@ class DaugtCommerceTags extends Tags
             ->where('collection', ProductEntry::COLLECTION)
             ->whereStatus('published')
             ->get()
-            ->filter(fn ($entry) => $entry instanceof ProductEntry);
+            ->filter(fn ($entry) => $entry instanceof EntryContract);
 
         if ($search !== null && $search !== '') {
             $needle = Str::lower($search);
-            $products = $products->filter(function (ProductEntry $entry) use ($needle) {
+            $products = $products->filter(function (EntryContract $entry) use ($needle) {
                 $title = Str::lower((string) ($entry->get(ProductEntry::TITLE) ?: ''));
                 $description = Str::lower($this->searchableDescription($entry->get(ProductEntry::DESCRIPTION)));
 
@@ -290,7 +290,7 @@ class DaugtCommerceTags extends Tags
 
         if ($category !== null && $category !== '') {
             $products = $products->filter(
-                fn (ProductEntry $entry) => $this->entryHasCategory($entry, $category)
+                fn (EntryContract $entry) => $this->entryHasCategory($entry, $category)
             );
         }
 
@@ -306,12 +306,12 @@ class DaugtCommerceTags extends Tags
     private function sortProducts(Collection $products, string $sort): Collection
     {
         return match ($sort) {
-            'price_asc' => $products->sortBy(fn (ProductEntry $entry) => $entry->price() ?? INF),
-            'price_desc' => $products->sortByDesc(fn (ProductEntry $entry) => $entry->price() ?? -INF),
-            'title_asc' => $products->sortBy(fn (ProductEntry $entry) => Str::lower((string) ($entry->get(ProductEntry::TITLE) ?: ''))),
-            'title_desc' => $products->sortByDesc(fn (ProductEntry $entry) => Str::lower((string) ($entry->get(ProductEntry::TITLE) ?: ''))),
-            'updated_asc' => $products->sortBy(fn (ProductEntry $entry) => $this->entryTimestamp($entry)),
-            default => $products->sortByDesc(fn (ProductEntry $entry) => $this->entryTimestamp($entry)),
+            'price_asc' => $products->sortBy(fn (EntryContract $entry) => $this->entryPrice($entry) ?? INF),
+            'price_desc' => $products->sortByDesc(fn (EntryContract $entry) => $this->entryPrice($entry) ?? -INF),
+            'title_asc' => $products->sortBy(fn (EntryContract $entry) => Str::lower((string) ($entry->get(ProductEntry::TITLE) ?: ''))),
+            'title_desc' => $products->sortByDesc(fn (EntryContract $entry) => Str::lower((string) ($entry->get(ProductEntry::TITLE) ?: ''))),
+            'updated_asc' => $products->sortBy(fn (EntryContract $entry) => $this->entryTimestamp($entry)),
+            default => $products->sortByDesc(fn (EntryContract $entry) => $this->entryTimestamp($entry)),
         };
     }
 
@@ -356,7 +356,7 @@ class DaugtCommerceTags extends Tags
         return '';
     }
 
-    private function shopProductRow(ProductEntry $entry): array
+    private function shopProductRow(EntryContract $entry): array
     {
         $media = $this->shopProductMedia($entry);
         $descriptionPreview = trim(strip_tags($this->searchableDescription($entry->get(ProductEntry::DESCRIPTION))));
@@ -368,15 +368,15 @@ class DaugtCommerceTags extends Tags
             'title' => (string) ($entry->get(ProductEntry::TITLE) ?? ''),
             'description' => $entry->get(ProductEntry::DESCRIPTION),
             'description_preview' => Str::limit($descriptionPreview, 120),
-            'price' => $entry->price(),
+            'price' => $this->entryPrice($entry),
             'media' => $media,
             'image' => $media[0] ?? null,
-            'external_product' => $entry->externalProduct(),
-            'external_product_url' => $entry->externalProductUrl(),
+            'external_product' => $this->entryExternalProduct($entry),
+            'external_product_url' => $this->entryExternalProductUrl($entry),
         ];
     }
 
-    private function shopProductMedia(ProductEntry $entry): array
+    private function shopProductMedia(EntryContract $entry): array
     {
         try {
             $augmented = $entry->augmentedValue(ProductEntry::MEDIA);
@@ -400,7 +400,7 @@ class DaugtCommerceTags extends Tags
         return Arr::wrap($entry->get(ProductEntry::MEDIA));
     }
 
-    private function entryHasCategory(ProductEntry $entry, string $category): bool
+    private function entryHasCategory(EntryContract $entry, string $category): bool
     {
         $normalizedCategory = Str::lower($category);
         $terms = $this->normalizeCategoryValues($entry->get(ProductEntry::CATEGORIES), ProductEntry::CATEGORIES);
@@ -413,7 +413,7 @@ class DaugtCommerceTags extends Tags
         $counts = [];
 
         foreach ($products as $entry) {
-            if (! $entry instanceof ProductEntry) {
+            if (! $entry instanceof EntryContract) {
                 continue;
             }
 
@@ -456,6 +456,41 @@ class DaugtCommerceTags extends Tags
         }
 
         return array_values(array_unique($slugs));
+    }
+
+    private function entryPrice(EntryContract $entry): ?float
+    {
+        if (method_exists($entry, 'price')) {
+            $value = $entry->price();
+
+            return $value !== null ? (float) $value : null;
+        }
+
+        $value = $entry->get(ProductEntry::PRICE);
+
+        return $value !== null ? (float) $value : null;
+    }
+
+    private function entryExternalProduct(EntryContract $entry): bool
+    {
+        if (method_exists($entry, 'externalProduct')) {
+            return (bool) $entry->externalProduct();
+        }
+
+        return (bool) $entry->get(ProductEntry::EXTERNAL_PRODUCT);
+    }
+
+    private function entryExternalProductUrl(EntryContract $entry): ?string
+    {
+        if (method_exists($entry, 'externalProductUrl')) {
+            $value = $entry->externalProductUrl();
+
+            return $value !== null ? (string) $value : null;
+        }
+
+        $value = $entry->get(ProductEntry::EXTERNAL_PRODUCT_URL);
+
+        return $value !== null ? (string) $value : null;
     }
 
     private function termsForTaxonomy(string $taxonomy): Collection

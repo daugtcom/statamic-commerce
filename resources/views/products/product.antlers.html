@@ -28,7 +28,7 @@
                     </a>
                 {{ else }}
                     {{ daugt_commerce:add_to_cart redirect="{ current_url }" }}
-                        <button type="submit" class="inline-flex items-center justify-center rounded-md bg-primary-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-primary-700">
+                        <button type="submit" data-cart-open class="inline-flex items-center justify-center rounded-md bg-primary-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-primary-700">
                             {{ trans:daugt-commerce::shop.add_to_cart }}
                         </button>
                     {{ /daugt_commerce:add_to_cart }}

@@ -1,31 +1,4 @@
-<style>
-    #daugt-commerce-cart {
-        width: min(24rem, 100%);
-        height: 100dvh;
-        margin-left: auto;
-        margin-top: 0;
-        margin-bottom: 0;
-        border: 0;
-        border-radius: 0.75rem 0 0 0.75rem;
-        padding: 1rem;
-        display: none;
-        flex-direction: column;
-        opacity: 0;
-        transition: opacity 0.2s ease-in-out;
-    }
-
-    #daugt-commerce-cart[open] {
-        display: flex;
-        opacity: 1;
-    }
-
-    #daugt-commerce-cart::backdrop {
-        background: rgba(0, 0, 0, 0.3);
-        backdrop-filter: blur(4px);
-    }
-</style>
-
-<dialog id="daugt-commerce-cart" class="bg-white shadow-xl" closedby="any">
+<dialog id="daugt-commerce-cart" class="m-0 ml-auto h-dvh max-h-dvh w-full max-w-sm border-0 rounded-l-xl rounded-r-none bg-white p-4 shadow-xl backdrop:bg-black/30 backdrop:backdrop-blur-sm open:flex flex-col transition-opacity duration-200" closedby="any">
     <div class="flex items-start justify-between">
         <h2 id="drawer-title" class="text-lg font-medium text-gray-900">{{ trans:daugt-commerce::cart.title }}</h2>
         <div class="ml-3 flex h-7 items-center">
@@ -40,7 +13,7 @@
             </form>
         </div>
     </div>
-    <ul role="list" class="divide-y divide-gray-200 flex-grow">
+    <ul role="list" class="mt-4 divide-y divide-gray-200 grow overflow-y-auto pr-1">
         {{ daugt_commerce:cart_items }}
             <li class="flex py-6">
                 <div class="size-24 shrink-0 overflow-hidden rounded-md border border-gray-200">
@@ -82,7 +55,50 @@
         {{ /daugt_commerce:cart_items }}
     </ul>
 
-    <a class="button-primary" href="{{ link to="checkout" }}">
+    <a class="button-primary mt-4" href="{{ link to="checkout" }}">
         {{ trans:daugt-commerce::cart.go-to-checkout }}
     </a>
 </dialog>
+
+<script>
+    (() => {
+        const CART_DIALOG_ID = 'daugt-commerce-cart';
+        const OPEN_AFTER_ADD_KEY = 'daugt-commerce-open-cart-after-add';
+
+        const getDialog = () => {
+            const dialog = document.getElementById(CART_DIALOG_ID);
+            return dialog instanceof HTMLDialogElement ? dialog : null;
+        };
+
+        const openDialog = () => {
+            const dialog = getDialog();
+            if (!dialog || dialog.open) return;
+            dialog.showModal();
+        };
+
+        window.daugtCommerceOpenCart = openDialog;
+
+        document.addEventListener('click', (event) => {
+            const trigger = event.target instanceof Element
+                ? event.target.closest('[data-cart-open]')
+                : null;
+
+            if (!trigger) return;
+
+            event.preventDefault();
+            openDialog();
+        });
+
+        document.addEventListener('submit', (event) => {
+            const form = event.target;
+            if (!(form instanceof HTMLFormElement)) return;
+            if (!form.action.includes('/cart/add')) return;
+            sessionStorage.setItem(OPEN_AFTER_ADD_KEY, '1');
+        });
+
+        if (sessionStorage.getItem(OPEN_AFTER_ADD_KEY) === '1') {
+            sessionStorage.removeItem(OPEN_AFTER_ADD_KEY);
+            openDialog();
+        }
+    })();
+</script>
