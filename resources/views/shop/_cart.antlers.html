@@ -1,0 +1,104 @@
+<dialog id="daugt-commerce-cart" class="m-0 ml-auto h-dvh max-h-dvh w-full max-w-sm border-0 rounded-l-xl rounded-r-none bg-white p-4 shadow-xl backdrop:bg-black/30 backdrop:backdrop-blur-sm open:flex flex-col transition-opacity duration-200" closedby="any">
+    <div class="flex items-start justify-between">
+        <h2 id="drawer-title" class="text-lg font-medium text-gray-900">{{ trans:daugt-commerce::cart.title }}</h2>
+        <div class="ml-3 flex h-7 items-center">
+            <form method="dialog">
+                <button type="submit" class="relative -m-2 p-2 text-gray-400 hover:text-gray-500">
+                    <span class="absolute -inset-0.5"></span>
+                    <span class="sr-only">{{ trans:daugt-commerce::cart.close_panel }}</span>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" data-slot="icon" aria-hidden="true" class="size-6">
+                        <path d="M6 18 18 6M6 6l12 12" stroke-linecap="round" stroke-linejoin="round" />
+                    </svg>
+                </button>
+            </form>
+        </div>
+    </div>
+    <ul role="list" class="mt-4 divide-y divide-gray-200 grow overflow-y-auto pr-1">
+        {{ daugt_commerce:cart_items }}
+            <li class="flex py-6">
+                <div class="size-24 shrink-0 overflow-hidden rounded-md border border-gray-200">
+                    {{ if entry.media[0] }}
+                        <img src="{{ glide :src="entry.media[0]" square="256" }}" alt="{{ entry.title }}" class="size-full object-cover" />
+                    {{ else }}
+                        <div class="size-full bg-gray-100"></div>
+                    {{ /if }}
+                </div>
+
+                <div class="ml-4 flex flex-1 flex-col">
+                    <div>
+                        <div class="flex justify-between text-base font-medium text-gray-900">
+                            <h3><a href="{{ entry.url }}">{{ entry.title }}</a></h3>
+                            <p class="ml-4">{{ daugt_commerce:money :value="entry.price" }}</p>
+                        </div>
+                        <p class="mt-1 text-sm text-gray-500">
+                            {{ if entry.shipping }}
+                                {{ trans:daugt-commerce::products.fields.shipping }}
+                            {{ /if }}
+                            {{ if entry.billing_type == "recurring" }}
+                                {{ trans:daugt-commerce::billing-types.recurring }}
+                            {{ /if }}
+                        </p>
+                    </div>
+                    <div class="flex flex-1 items-end justify-between text-sm">
+                        <p class="text-gray-500">{{ trans:daugt-commerce::cart.quantity :count="quantity" }}</p>
+
+                        <div class="flex">
+                            {{ daugt_commerce:remove_from_cart :product_id="product_id" }}
+                                <button class="font-medium text-primary-600 hover:text-primary-500">
+                                    {{ trans:daugt-commerce::cart.remove }}
+                                </button>
+                            {{ /daugt_commerce:remove_from_cart }}
+                        </div>
+                    </div>
+                </div>
+            </li>
+        {{ /daugt_commerce:cart_items }}
+    </ul>
+
+    <a class="button-primary mt-4" href="{{ link to="checkout" }}">
+        {{ trans:daugt-commerce::cart.go-to-checkout }}
+    </a>
+</dialog>
+
+<script>
+    (() => {
+        const CART_DIALOG_ID = 'daugt-commerce-cart';
+        const OPEN_AFTER_ADD_KEY = 'daugt-commerce-open-cart-after-add';
+
+        const getDialog = () => {
+            const dialog = document.getElementById(CART_DIALOG_ID);
+            return dialog instanceof HTMLDialogElement ? dialog : null;
+        };
+
+        const openDialog = () => {
+            const dialog = getDialog();
+            if (!dialog || dialog.open) return;
+            dialog.showModal();
+        };
+
+        window.daugtCommerceOpenCart = openDialog;
+
+        document.addEventListener('click', (event) => {
+            const trigger = event.target instanceof Element
+                ? event.target.closest('[data-cart-open]')
+                : null;
+
+            if (!trigger) return;
+
+            event.preventDefault();
+            openDialog();
+        });
+
+        document.addEventListener('submit', (event) => {
+            const form = event.target;
+            if (!(form instanceof HTMLFormElement)) return;
+            if (!form.action.includes('/cart/add')) return;
+            sessionStorage.setItem(OPEN_AFTER_ADD_KEY, '1');
+        });
+
+        if (sessionStorage.getItem(OPEN_AFTER_ADD_KEY) === '1') {
+            sessionStorage.removeItem(OPEN_AFTER_ADD_KEY);
+            openDialog();
+        }
+    })();
+</script>

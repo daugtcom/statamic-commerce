@@ -1,0 +1,22 @@
+<div class="container mx-auto mt-28 px-4 pb-12">
+    <div class="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+            <h1 class="text-3xl font-bold text-neutral-800">{{ trans:daugt-commerce::checkout.title }}</h1>
+            <p class="mt-1 text-sm text-neutral-600">{{ trans:daugt-commerce::checkout.subtitle }}</p>
+        </div>
+
+        <a href="/shop" class="inline-flex items-center text-sm font-medium text-neutral-600 hover:text-neutral-900">
+            ← {{ trans:daugt-commerce::checkout.continue_shopping }}
+        </a>
+    </div>
+
+    {{ if daugt_commerce:cart_count == "0" }}
+        <div class="rounded-xl border border-dashed border-neutral-300 bg-white p-10 text-center text-neutral-600">
+            {{ trans:daugt-commerce::checkout.empty }}
+        </div>
+    {{ else }}
+        <div class="overflow-hidden rounded-xl border border-neutral-200 bg-white">
+            {{ daugt_commerce:checkout return_url="{ current_url }" }}
+        </div>
+    {{ /if }}
+</div>

@@ -1,0 +1,56 @@
+<div class="container mx-auto mt-28 px-4 pb-12">
+    <a href="/shop" class="inline-flex items-center text-sm font-medium text-neutral-600 hover:text-neutral-900">
+        ← {{ trans:daugt-commerce::shop.back_to_shop }}
+    </a>
+
+    <div class="mt-8 grid grid-cols-1 gap-10 lg:grid-cols-5 lg:gap-12">
+        <div class="lg:col-span-3">
+            <div class="overflow-hidden rounded-lg border border-neutral-200 bg-neutral-50">
+                {{ if media[0] }}
+                    <img src="{{ glide :src="media[0]" width="1200" height="820" fit="crop" }}" alt="{{ title }}" class="w-full object-cover" />
+                {{ else }}
+                    <div class="aspect-[10/7] w-full bg-neutral-200"></div>
+                {{ /if }}
+            </div>
+        </div>
+
+        <div class="lg:col-span-2">
+            <h1 class="text-2xl font-bold text-neutral-800 sm:text-3xl">{{ title }}</h1>
+
+            <div class="mt-5 border-y border-neutral-300 py-4">
+                <div class="text-2xl font-bold text-neutral-800">{{ daugt_commerce:money :value="price" }}</div>
+            </div>
+
+            <div class="mt-4">
+                {{ if external_product && external_product_url }}
+                    <a href="{{ external_product_url }}" target="_blank" rel="noopener" class="inline-flex items-center justify-center rounded-md bg-primary-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-primary-700">
+                        {{ trans:daugt-commerce::shop.buy_external }}
+                    </a>
+                {{ else }}
+                    {{ daugt_commerce:add_to_cart redirect="{ current_url }" }}
+                        <button type="submit" data-cart-open class="inline-flex items-center justify-center rounded-md bg-primary-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-primary-700">
+                            {{ trans:daugt-commerce::shop.add_to_cart }}
+                        </button>
+                    {{ /daugt_commerce:add_to_cart }}
+                {{ /if }}
+            </div>
+
+            <ul class="mt-6 space-y-2 text-sm text-neutral-600">
+                {{ if shipping }}
+                    <li>{{ trans:daugt-commerce::shop.shipping_product }}</li>
+                {{ /if }}
+
+                {{ if billing_type == "recurring" }}
+                    <li>{{ trans:daugt-commerce::shop.recurring_billing }}</li>
+                {{ /if }}
+            </ul>
+        </div>
+
+        {{ if description }}
+            <div class="lg:col-span-3">
+                <h2 class="text-lg font-semibold text-neutral-800">{{ trans:daugt-commerce::shop.description }}</h2>
+                <div class="prose prose-neutral mt-3 max-w-none">{{ description }}</div>
+            </div>
+        {{ /if }}
+    </div>
+</div>
